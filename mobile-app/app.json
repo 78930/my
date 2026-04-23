@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Sketu",
+    "slug": "sketu",
+    "scheme": "sketu",
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "assetBundlePatterns": ["**/*"]
+  }
+}
