@@ -1,0 +1,15 @@
+export const colors = {
+  bg: '#020617',
+  panel: '#0f172a',
+  panelSoft: '#111827',
+  card: '#ffffff',
+  text: '#0f172a',
+  textSoft: '#64748b',
+  textInverse: '#ffffff',
+  textMuted: '#94a3b8',
+  primary: '#f97316',
+  primarySoft: '#fff7ed',
+  border: '#e2e8f0',
+  borderDark: '#1f2937',
+  success: '#16a34a',
+};

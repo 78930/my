@@ -1,0 +1,28 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  api:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://mongo:27017/sketu
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-*}
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:
