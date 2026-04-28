@@ -92,4 +92,11 @@ export const mostDemandingRoles = [
   'Quality Control (QC) Engineer',
   'Maintenance Technician',
   'Automation Engineer',
+  'General Manager – Manufacturing',
+    'Operations Head',
+    'Unit Head',
+    'Works Manager',
+    'Production Head',
+    'Technical Director',
+    'Manufacturing Head',
 ];

@@ -35,13 +35,7 @@ export default function HomeTab() {
         </Pressable>
       </View>
 
-      <View style={styles.hero}>
-        <Text style={styles.eyebrow}>Live backend connected</Text>
-        <Text style={styles.title}>Leadership roles and industrial hiring on one mobile app.</Text>
-        <Text style={styles.description}>
-          Your app is now wired to the Sketu backend for auth, live jobs, worker search, job details, worker application history and factory job posting.
-        </Text>
-      </View>
+      
 
       <View style={styles.statsRow}>
         <StatCard icon="people-outline" value={user?.type === 'worker' ? 'Worker' : 'Factory'} label="Account type" />
@@ -49,13 +43,6 @@ export default function HomeTab() {
         <StatCard icon="cloud-outline" value={getApiBaseUrl() ? 'Online' : 'Missing URL'} label="API status" />
       </View>
 
-      <SectionCard title="Most demanding roles" subtitle="Top categories factories search for frequently">
-        <View style={styles.pillsWrap}>
-          {mostDemandingRoles.map((role) => (
-            <Pill key={role} label={role} />
-          ))}
-        </View>
-      </SectionCard>
 
       <SectionCard title="Target industrial areas" subtitle="Cluster-based discovery across Hyderabad">
         <View style={styles.pillsWrap}>

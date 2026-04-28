@@ -3,12 +3,25 @@
     "name": "Sketu",
     "slug": "sketu",
     "scheme": "sketu",
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     },
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": ["**/*"]
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "840ef7d2-ade0-404b-9f1d-d417d955ee1d"
+      }
+    },
+    "android": {
+      "package": "com.vikram379.sketu"
+    }
   }
 }

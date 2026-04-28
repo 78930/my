@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
 import { InputField } from '../../components/ui/InputField';
@@ -11,6 +12,7 @@ import { industrialAreas } from '../../constants/areas';
 import { allRoles } from '../../constants/roles';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
+import { languageLabels, supportedLanguages } from '../../lib/language';
 import { getFactoryProfile, updateFactoryProfile } from '../../services/factory';
 import { getWorkerProfile, updateWorkerProfile } from '../../services/workers';
 
@@ -26,7 +28,11 @@ function toggleArrayItem(items: string[], value: string) {
 }
 
 export default function ProfileTab() {
+  const { t, i18n } = useTranslation();
   const { token, user, isFactory, isWorker, refreshSession, signOut } = useAuth();
+  const currentLanguage = supportedLanguages.includes(i18n.language as (typeof supportedLanguages)[number])
+    ? (i18n.language as (typeof supportedLanguages)[number])
+    : 'en';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -207,9 +213,18 @@ export default function ProfileTab() {
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </SectionCard>
 
+      <SectionCard
+        title={t('settings.languagePreference')}
+        subtitle={t('settings.currentLanguage', { language: languageLabels[currentLanguage] })}
+      >
+        <Pressable style={styles.softButton} onPress={() => router.push('/settings')}>
+          <Text style={styles.softButtonText}>{t('settings.changeLanguage')}</Text>
+        </Pressable>
+      </SectionCard>
+
       {isWorker ? (
         <>
-          <SectionCard title="Basic details" subtitle="These values are saved to /api/workers/me/profile">
+          <SectionCard title="Basic details" subtitle="">
             <InputField icon="person-outline" placeholder="Full name" value={fullName} onChangeText={setFullName} />
             <InputField icon="megaphone-outline" placeholder="Headline" value={headline} onChangeText={setHeadline} />
             <InputField

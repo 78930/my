@@ -1,55 +1,26 @@
-import React from 'react';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import { colors } from '../../constants/colors';
+import { useTranslation } from 'react-i18next';
 
-export default function TabsLayout() {
+export default function TabLayout() {
+  const { t } = useTranslation();
+
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.panel,
-          borderTopColor: 'rgba(255,255,255,0.08)',
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} />,
-        }}
-      />
+    <Tabs>
       <Tabs.Screen
         name="jobs"
-        options={{
-          title: 'Jobs',
-          tabBarIcon: ({ color, size }) => <Ionicons name="briefcase-outline" color={color} size={size} />,
-        }}
+        options={{ title: t('tabs.jobs') }}
       />
       <Tabs.Screen
-        name="talent"
-        options={{
-          title: 'Talent',
-          tabBarIcon: ({ color, size }) => <Ionicons name="people-outline" color={color} size={size} />,
-        }}
+        name="saved"
+        options={{ title: t('tabs.saved') }}
       />
       <Tabs.Screen
-        name="factory"
-        options={{
-          title: 'Factory',
-          tabBarIcon: ({ color, size }) => <Ionicons name="business-outline" color={color} size={size} />,
-        }}
+        name="applications"
+        options={{ title: t('tabs.applications') }}
       />
       <Tabs.Screen
         name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-circle-outline" color={color} size={size} />,
-        }}
+        options={{ title: t('tabs.profile') }}
       />
     </Tabs>
   );

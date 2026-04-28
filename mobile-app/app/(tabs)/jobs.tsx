@@ -57,7 +57,7 @@ export default function JobsTab() {
     };
   }, [area, role, search]);
 
-  const subtitle = useMemo(() => `Live API search • ${items.length} result${items.length === 1 ? '' : 's'}`, [items.length]);
+  const subtitle = useMemo(() => `${items.length} result${items.length === 1 ? '' : 's'}`, [items.length]);
 
   async function handleApply(jobId: string) {
     if (!token || !isWorker) {
@@ -95,11 +95,11 @@ export default function JobsTab() {
         />
 
         <Text style={styles.label}>Industrial area</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-          {industrialAreas.map((item) => (
-            <Pill key={item} label={item} active={area === item} onPress={() => setArea(item)} />
-          ))}
-        </ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.column}>
+  {industrialAreas.map((item) => (
+    <Pill key={item} label={item} active={area === item} onPress={() => setArea(item)} />
+  ))}
+</ScrollView>
 
         <Text style={styles.label}>Popular roles</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
