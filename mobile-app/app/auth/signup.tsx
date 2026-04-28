@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { InputField } from '../../components/ui/InputField';
+import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { Pill } from '../../components/ui/Pill';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
@@ -13,6 +15,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 
 export default function SignupScreen() {
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ type?: string }>();
   const type = useMemo<UserType>(() => (params.type === 'factory' ? 'factory' : 'worker'), [params.type]);
 
@@ -57,36 +60,49 @@ export default function SignupScreen() {
       }
       router.replace('/(tabs)');
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Sign up failed';
+      const message = err instanceof ApiError ? err.message : t('auth.signupFailed');
       setError(message);
     }
   }
 
   return (
     <Screen>
+      <LanguageSelector compact />
       <SectionCard
-        title={`Create ${type === 'factory' ? 'Factory' : 'Worker'} account`}
-        subtitle="This form is now wired to the live Sketu backend register endpoint."
+        title={t('auth.createAccountAs', {
+          type: type === 'factory' ? t('userType.factory') : t('userType.worker'),
+        })}
+        subtitle={t('auth.signupSubtitle')}
       >
         {type === 'factory' ? (
           <>
             <InputField
               icon="business-outline"
-              placeholder="Company name"
+              placeholder={t('auth.companyNamePlaceholder')}
               value={companyName}
               onChangeText={setCompanyName}
             />
-            <InputField icon="person-outline" placeholder="HR name" value={hrName} onChangeText={setHrName} />
+            <InputField
+              icon="person-outline"
+              placeholder={t('auth.hrNamePlaceholder')}
+              value={hrName}
+              onChangeText={setHrName}
+            />
           </>
         ) : (
-          <InputField icon="person-outline" placeholder="Full name" value={fullName} onChangeText={setFullName} />
+          <InputField
+            icon="person-outline"
+            placeholder={t('auth.fullNamePlaceholder')}
+            value={fullName}
+            onChangeText={setFullName}
+          />
         )}
 
-        <InputField icon="mail-outline" placeholder="Email address" value={email} onChangeText={setEmail} />
-        <InputField icon="call-outline" placeholder="Mobile number" value={phone} onChangeText={setPhone} />
+        <InputField icon="mail-outline" placeholder={t('auth.emailPlaceholder')} value={email} onChangeText={setEmail} />
+        <InputField icon="call-outline" placeholder={t('auth.phonePlaceholder')} value={phone} onChangeText={setPhone} />
         <InputField
           icon="lock-closed-outline"
-          placeholder="Create password"
+          placeholder={t('auth.createPasswordPlaceholder')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -95,14 +111,16 @@ export default function SignupScreen() {
         {type === 'factory' ? (
           <InputField
             icon="document-text-outline"
-            placeholder="Factory description"
+            placeholder={t('auth.factoryDescriptionPlaceholder')}
             value={description}
             onChangeText={setDescription}
           />
         ) : null}
 
         <View>
-          <Text style={styles.label}>{type === 'factory' ? 'Industrial area' : 'Preferred industrial area'}</Text>
+          <Text style={styles.label}>
+            {type === 'factory' ? t('auth.industrialArea') : t('auth.preferredIndustrialArea')}
+          </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             {industrialAreas.map((area) => (
               <Pill
@@ -117,7 +135,7 @@ export default function SignupScreen() {
 
         {type === 'worker' ? (
           <View>
-            <Text style={styles.label}>Primary role</Text>
+            <Text style={styles.label}>{t('auth.primaryRole')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
               {allRoles.slice(0, 20).map((role) => (
                 <Pill
@@ -139,10 +157,10 @@ export default function SignupScreen() {
 
         <View style={styles.actions}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </Pressable>
           <Pressable style={styles.primaryButton} onPress={handleSignup} disabled={isSubmitting}>
-            <Text style={styles.primaryText}>{isSubmitting ? 'Creating...' : 'Create account'}</Text>
+            <Text style={styles.primaryText}>{isSubmitting ? t('auth.creating') : t('auth.createAccount')}</Text>
           </Pressable>
         </View>
       </SectionCard>

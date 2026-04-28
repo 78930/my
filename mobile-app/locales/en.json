@@ -1,0 +1,65 @@
+{
+    "common": {
+      "language": "Language",
+      "save": "Save",
+      "cancel": "Cancel",
+      "settings": "Settings",
+      "back": "Back",
+      "continue": "Continue"
+    },
+    "auth": {
+      "welcome": "Welcome",
+      "login": "Login",
+      "signup": "Sign Up",
+      "worker": "Worker",
+      "factory": "Factory",
+      "welcomeSubtitle": "Leadership and industrial hiring marketplace",
+      "chooseUsage": "Choose how you want to use Sketu",
+      "workerChoiceText": "Find jobs by area, role, pay and shift.",
+      "factoryChoiceText": "Search workers, shortlist and hire faster.",
+      "loginAsWorker": "Login as worker",
+      "loginAsFactory": "Login as factory",
+      "workerSignup": "Worker sign up",
+      "factorySignup": "Factory sign up",
+      "loginAs": "Login as {{type}}",
+      "loginSubtitle": "Use your account to continue.",
+      "emailPlaceholder": "Email address",
+      "passwordPlaceholder": "Password",
+      "loginFailed": "Login failed",
+      "signingIn": "Signing in...",
+      "createNewAccount": "Create new {{type}} account",
+      "createAccountAs": "Create {{type}} account",
+      "signupSubtitle": "Choose your language before entering the app.",
+      "companyNamePlaceholder": "Company name",
+      "hrNamePlaceholder": "HR name",
+      "fullNamePlaceholder": "Full name",
+      "phonePlaceholder": "Mobile number",
+      "createPasswordPlaceholder": "Create password",
+      "factoryDescriptionPlaceholder": "Factory description",
+      "industrialArea": "Industrial area",
+      "preferredIndustrialArea": "Preferred industrial area",
+      "primaryRole": "Primary role",
+      "signupFailed": "Sign up failed",
+      "creating": "Creating...",
+      "createAccount": "Create account"
+    },
+    "userType": {
+      "worker": "Worker",
+      "factory": "Factory"
+    },
+    "tabs": {
+      "jobs": "Jobs",
+      "saved": "Saved Jobs",
+      "applications": "Applications",
+      "profile": "Profile"
+    },
+    "settings": {
+      "languagePreference": "Language Preference",
+      "chooseLanguage": "Choose Language",
+      "currentLanguage": "Current language: {{language}}",
+      "changeLanguage": "Change language",
+      "english": "English",
+      "hindi": "Hindi",
+      "telugu": "Telugu"
+    }
+  }

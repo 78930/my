@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { InputField } from '../../components/ui/InputField';
+import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
 import { colors } from '../../constants/colors';
@@ -10,12 +12,17 @@ import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
+
   const params = useLocalSearchParams<{ type?: string }>();
-  const type = useMemo<UserType>(() => (params.type === 'factory' ? 'factory' : 'worker'), [params.type]);
+  const type = useMemo<UserType>(
+    () => (params.type === 'factory' ? 'factory' : 'worker'),
+    [params.type]
+  );
 
   const { signIn, isSubmitting } = useAuth();
-  const [email, setEmail] = useState(type === 'factory' ? 'factory@sketu.app' : 'worker@sketu.app');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState(type === 'factory' ? '' : '');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   async function handleLogin() {
@@ -24,21 +31,31 @@ export default function LoginScreen() {
       await signIn({ email, password });
       router.replace('/(tabs)');
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Login failed';
+      const message =
+        err instanceof ApiError ? err.message : t('auth.loginFailed');
       setError(message);
     }
   }
 
   return (
     <Screen>
+      <LanguageSelector compact />
       <SectionCard
-        title={`Login as ${type === 'factory' ? 'Factory' : 'Worker'}`}
-        subtitle="Connected to the Sketu backend API. Use a registered email and password."
+        title={t('auth.loginAs', {
+          type: type === 'factory' ? t('userType.factory') : t('userType.worker'),
+        })}
+        subtitle={t('auth.loginSubtitle')}
       >
-        <InputField icon="mail-outline" placeholder="Email address" value={email} onChangeText={setEmail} />
+        <InputField
+          icon="mail-outline"
+          placeholder={t('auth.emailPlaceholder')}
+          value={email}
+          onChangeText={setEmail}
+        />
+
         <InputField
           icon="lock-closed-outline"
-          placeholder="Password"
+          placeholder={t('auth.passwordPlaceholder')}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -52,18 +69,31 @@ export default function LoginScreen() {
 
         <View style={styles.actions}>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>Back</Text>
+            <Text style={styles.backText}>{t('common.back')}</Text>
           </Pressable>
-          <Pressable style={styles.primaryButton} onPress={handleLogin} disabled={isSubmitting}>
-            <Text style={styles.primaryText}>{isSubmitting ? 'Signing in...' : 'Continue'}</Text>
+
+          <Pressable
+            style={styles.primaryButton}
+            onPress={handleLogin}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.primaryText}>
+              {isSubmitting ? t('auth.signingIn') : t('common.continue')}
+            </Text>
           </Pressable>
         </View>
 
         <Pressable
           style={styles.link}
-          onPress={() => router.replace({ pathname: '/auth/signup', params: { type } })}
+          onPress={() =>
+            router.replace({ pathname: '/auth/signup', params: { type } })
+          }
         >
-          <Text style={styles.linkText}>Create a new {type} account</Text>
+          <Text style={styles.linkText}>
+            {t('auth.createNewAccount', {
+              type: type === 'factory' ? t('userType.factory') : t('userType.worker'),
+            })}
+          </Text>
         </Pressable>
       </SectionCard>
     </Screen>

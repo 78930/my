@@ -20,7 +20,10 @@ const workerProfileSchema = new Schema(
   { timestamps: true }
 );
 
-workerProfileSchema.index({ skills: 1, preferredRoles: 1, preferredAreas: 1, preferredShifts: 1 });
+workerProfileSchema.index({ skills: 1 });
+workerProfileSchema.index({ preferredRoles: 1 });
+workerProfileSchema.index({ preferredAreas: 1 });
+workerProfileSchema.index({ preferredShifts: 1 });
 
 export type WorkerProfileDocument = InferSchemaType<typeof workerProfileSchema> & { _id: string };
 export const WorkerProfile =

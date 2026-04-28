@@ -48,7 +48,7 @@ export default function TalentTab() {
 
   return (
     <Screen>
-      <SectionCard title="Talent" subtitle={`Live worker search • ${items.length} profile${items.length === 1 ? '' : 's'}`}>
+      <SectionCard title="Talent" subtitle={` ${items.length} profile${items.length === 1 ? '' : 's'}`}>
         <InputField
           icon="search-outline"
           placeholder="Search workers, PLC, CNC, QA..."
