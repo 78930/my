@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getStoredItem, removeStoredItem, setStoredItem } from '../lib/storage';
-import { getMe, login, registerFactory, registerWorker } from '../services/auth';
+import { getMe, login, loginWithOtp, registerFactory, registerWorker, requestLoginOtp } from '../services/auth';
 import { AuthUser, FactoryProfile, UserType, WorkerProfile } from '../types';
 
 const SESSION_KEY = 'sketu.session';
@@ -14,6 +14,8 @@ type AuthContextValue = {
   isLoading: boolean;
   isSubmitting: boolean;
   signIn: (payload: { email: string; password: string }) => Promise<void>;
+  requestOtp: (payload: { phone: string }) => Promise<{ message: string; expiresInSeconds: number; otpCode?: string }>;
+  signInWithOtp: (payload: { phone: string; otp: string }) => Promise<void>;
   signUpWorker: (payload: {
     fullName: string;
     email: string;
@@ -98,6 +100,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persistSession]);
 
+  const requestOtp = useCallback(async (payload: { phone: string }) => {
+    setIsSubmitting(true);
+    try {
+      return await requestLoginOtp(payload);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
+
+  const signInWithOtp = useCallback(async (payload: { phone: string; otp: string }) => {
+    setIsSubmitting(true);
+    try {
+      const session = await loginWithOtp(payload);
+      await persistSession(session);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [persistSession]);
+
   const signUpWorker = useCallback(async (payload: {
     fullName: string;
     email: string;
@@ -147,6 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       isSubmitting,
       signIn,
+      requestOtp,
+      signInWithOtp,
       signUpWorker,
       signUpFactory,
       refreshSession,
@@ -154,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isFactory: user?.type === 'factory',
       isWorker: user?.type === 'worker',
     }),
-    [user, token, profile, isLoading, isSubmitting, signIn, signUpWorker, signUpFactory, refreshSession, signOut]
+    [user, token, profile, isLoading, isSubmitting, signIn, requestOtp, signInWithOtp, signUpWorker, signUpFactory, refreshSession, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

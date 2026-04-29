@@ -15,4 +15,10 @@ export const env = {
   mongoUri: required("MONGODB_URI"),
   jwtSecret: required("JWT_SECRET"),
   clientOrigin: process.env.CLIENT_ORIGIN ?? "*",
+  nodeEnv: process.env.NODE_ENV ?? "development",
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? "",
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? "",
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER ?? "",
+  otpDefaultCountryCode: process.env.OTP_DEFAULT_COUNTRY_CODE ?? "+91",
 };
+   

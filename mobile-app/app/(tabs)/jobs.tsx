@@ -95,7 +95,7 @@ export default function JobsTab() {
         />
 
         <Text style={styles.label}>Industrial area</Text>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.column}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
   {industrialAreas.map((item) => (
     <Pill key={item} label={item} active={area === item} onPress={() => setArea(item)} />
   ))}

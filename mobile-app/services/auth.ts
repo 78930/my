@@ -29,9 +29,39 @@ export type SessionPayload = {
   profile: WorkerProfile | FactoryProfile | null;
 };
 
+export type OtpRequestResponse = {
+  message: string;
+  expiresInSeconds: number;
+  otpCode?: string;
+};
+
 export async function login(payload: { email: string; password: string }): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/login',
+    {
+      method: 'POST',
+      body: payload,
+    }
+  );
+
+  const me = await getMe(auth.token);
+  return {
+    token: auth.token,
+    user: mapAuthUser({ user: auth.user, profile: me.profile }),
+    profile: me.profile,
+  };
+}
+
+export async function requestLoginOtp(payload: { phone: string }): Promise<OtpRequestResponse> {
+  return apiRequest<OtpRequestResponse>('/api/auth/request-otp', {
+    method: 'POST',
+    body: payload,
+  });
+}
+
+export async function loginWithOtp(payload: { phone: string; otp: string }): Promise<SessionPayload> {
+  const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
+    '/api/auth/verify-otp',
     {
       method: 'POST',
       body: payload,

@@ -95,6 +95,10 @@ export default function LoginScreen() {
             })}
           </Text>
         </Pressable>
+
+        <Pressable style={styles.link} onPress={() => router.push('/auth/otp-login')}>
+          <Text style={styles.linkText}>{t('auth.loginWithOtp')}</Text>
+        </Pressable>
       </SectionCard>
     </Screen>
   );
