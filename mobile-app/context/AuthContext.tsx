@@ -1,11 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getStoredItem, removeStoredItem, setStoredItem } from '../lib/storage';
-<<<<<<< HEAD
 import { getMe, login, loginWithOtp, registerFactory, registerWorker, requestLoginOtp } from '../services/auth';
-=======
-import { getMe, login, registerFactory, registerWorker } from '../services/auth';
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
-import { AuthUser, FactoryProfile, UserType, WorkerProfile } from '../types';
+import { AuthUser, FactoryProfile, WorkerProfile } from '../types';
 
 const SESSION_KEY = 'sketu.session';
 
@@ -18,11 +14,8 @@ type AuthContextValue = {
   isLoading: boolean;
   isSubmitting: boolean;
   signIn: (payload: { email: string; password: string }) => Promise<void>;
-<<<<<<< HEAD
   requestOtp: (payload: { phone: string }) => Promise<{ message: string; expiresInSeconds: number; otpCode?: string }>;
   signInWithOtp: (payload: { phone: string; otp: string }) => Promise<void>;
-=======
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
   signUpWorker: (payload: {
     fullName: string;
     email: string;
@@ -107,7 +100,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persistSession]);
 
-<<<<<<< HEAD
   const requestOtp = useCallback(async (payload: { phone: string }) => {
     setIsSubmitting(true);
     try {
@@ -127,8 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persistSession]);
 
-=======
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
   const signUpWorker = useCallback(async (payload: {
     fullName: string;
     email: string;
@@ -178,11 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       isSubmitting,
       signIn,
-<<<<<<< HEAD
       requestOtp,
       signInWithOtp,
-=======
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
       signUpWorker,
       signUpFactory,
       refreshSession,
@@ -190,11 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isFactory: user?.type === 'factory',
       isWorker: user?.type === 'worker',
     }),
-<<<<<<< HEAD
     [user, token, profile, isLoading, isSubmitting, signIn, requestOtp, signInWithOtp, signUpWorker, signUpFactory, refreshSession, signOut]
-=======
-    [user, token, profile, isLoading, isSubmitting, signIn, signUpWorker, signUpFactory, refreshSession, signOut]
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

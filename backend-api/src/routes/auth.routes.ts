@@ -7,7 +7,6 @@ import FactoryProfileModel from "../models/FactoryProfile.js";
 import { comparePassword, hashPassword } from "../utils/password.js";
 import { signAccessToken } from "../utils/jwt.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
-<<<<<<< HEAD
 import { env } from "../config/env.js";
 import { sendOtpSms } from "../services/sms.js";
 import { sendOtp, verifyOtp } from "../controllers/otp.controller.js";
@@ -19,11 +18,6 @@ router.post("/send-otp", sendOtp);
 router.post("/verify-otp", verifyOtp);
 
 
-=======
-
-const router = Router();
-
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
 const registerSchema = z.discriminatedUnion("role", [
   z.object({
     role: z.literal("WORKER"),
@@ -52,7 +46,6 @@ const loginSchema = z.object({
   email: z.email(),
   password: z.string().min(8),
 });
-<<<<<<< HEAD
 const requestOtpSchema = z.object({
   phone: z.string().min(10),
 });
@@ -83,8 +76,6 @@ function createAuthResponse(user: { _id: unknown; role: "WORKER" | "FACTORY"; em
     },
   };
 }
-=======
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
 
 router.post(
   "/register",
@@ -99,11 +90,7 @@ router.post(
     const user = await UserModel.create({
       name: input.role === "WORKER" ? input.fullName : input.hrName,
       email: input.email.toLowerCase(),
-<<<<<<< HEAD
       phone: normalizePhone(input.phone),
-=======
-      phone: input.phone,
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
       passwordHash: await hashPassword(input.password),
       role: input.role,
     });
@@ -127,25 +114,7 @@ router.post(
       });
     }
 
-<<<<<<< HEAD
     return res.status(201).json(createAuthResponse(user));
-=======
-    const token = signAccessToken({
-      sub: String(user._id),
-      role: user.role,
-      email: user.email,
-    });
-
-    return res.status(201).json({
-      token,
-      user: {
-        id: user._id,
-        role: user.role,
-        email: user.email,
-        phone: user.phone,
-      },
-    });
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
   })
 );
 
@@ -164,7 +133,6 @@ router.post(
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-<<<<<<< HEAD
     return res.json(createAuthResponse(user));
   })
 );
@@ -203,27 +171,10 @@ router.post(
       message: "OTP sent successfully",
       expiresInSeconds: 300,
       ...(process.env.nodeEnv !== "production" ? { otpCode: code } : {}),
-=======
-    const token = signAccessToken({
-      sub: String(user._id),
-      role: user.role,
-      email: user.email,
-    });
-
-    return res.json({
-      token,
-      user: {
-        id: user._id,
-        role: user.role,
-        email: user.email,
-        phone: user.phone,
-      },
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
     });
   })
 );
 
-<<<<<<< HEAD
 router.post(
   "/verify-otp",
   asyncHandler(async (req, res) => {
@@ -257,8 +208,6 @@ router.post(
   })
 );
 
-=======
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
 router.get(
   "/me",
   requireAuth,

@@ -17,10 +17,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.2.0",
     "mongoose": "^9.4.1",
-<<<<<<< HEAD
     "twilio": "^6.0.0",
-=======
->>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
     "zod": "^4.3.6"
   },
   "devDependencies": {
