@@ -26,6 +26,7 @@
       "emailPlaceholder": "ईमेल पता",
       "passwordPlaceholder": "पासवर्ड",
       "loginFailed": "लॉगिन असफल रहा",
+<<<<<<< HEAD
       "loginWithOtp": "फोन OTP से लॉगिन करें",
       "signingIn": "लॉगिन हो रहा है...",
       "otpLoginTitle": "OTP लॉगिन",
@@ -40,6 +41,9 @@
       "otpRequestFailed": "OTP भेजा नहीं जा सका",
       "otpVerifyFailed": "OTP सत्यापित नहीं हो सका",
       "devOtpHint": "डेव OTP: {{otp}}",
+=======
+      "signingIn": "लॉगिन हो रहा है...",
+>>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
       "createNewAccount": "नया {{type}} अकाउंट बनाएं",
       "createAccountAs": "{{type}} अकाउंट बनाएं",
       "signupSubtitle": "ऐप में जाने से पहले अपनी भाषा चुनें।",

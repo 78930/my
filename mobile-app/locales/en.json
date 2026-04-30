@@ -26,6 +26,7 @@
       "emailPlaceholder": "Email address",
       "passwordPlaceholder": "Password",
       "loginFailed": "Login failed",
+<<<<<<< HEAD
       "loginWithOtp": "Login with phone OTP",
       "signingIn": "Signing in...",
       "otpLoginTitle": "OTP login",
@@ -40,6 +41,9 @@
       "otpRequestFailed": "Unable to send OTP",
       "otpVerifyFailed": "Unable to verify OTP",
       "devOtpHint": "Dev OTP: {{otp}}",
+=======
+      "signingIn": "Signing in...",
+>>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
       "createNewAccount": "Create new {{type}} account",
       "createAccountAs": "Create {{type}} account",
       "signupSubtitle": "Choose your language before entering the app.",

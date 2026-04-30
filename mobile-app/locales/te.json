@@ -26,6 +26,7 @@
       "emailPlaceholder": "ఈమెయిల్ చిరునామా",
       "passwordPlaceholder": "పాస్‌వర్డ్",
       "loginFailed": "లాగిన్ విఫలమైంది",
+<<<<<<< HEAD
       "loginWithOtp": "ఫోన్ OTP తో లాగిన్ అవ్వండి",
       "signingIn": "లాగిన్ అవుతోంది...",
       "otpLoginTitle": "OTP లాగిన్",
@@ -40,6 +41,9 @@
       "otpRequestFailed": "OTP పంపలేకపోయాం",
       "otpVerifyFailed": "OTP నిర్ధారించలేకపోయాం",
       "devOtpHint": "డెవ్ OTP: {{otp}}",
+=======
+      "signingIn": "లాగిన్ అవుతోంది...",
+>>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
       "createNewAccount": "కొత్త {{type}} ఖాతాను సృష్టించండి",
       "createAccountAs": "{{type}} ఖాతాను సృష్టించండి",
       "signupSubtitle": "యాప్‌లోకి వెళ్లే ముందు మీ భాషను ఎంచుకోండి.",

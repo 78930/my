@@ -29,12 +29,15 @@ export type SessionPayload = {
   profile: WorkerProfile | FactoryProfile | null;
 };
 
+<<<<<<< HEAD
 export type OtpRequestResponse = {
   message: string;
   expiresInSeconds: number;
   otpCode?: string;
 };
 
+=======
+>>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
 export async function login(payload: { email: string; password: string }): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/login',
@@ -52,6 +55,7 @@ export async function login(payload: { email: string; password: string }): Promi
   };
 }
 
+<<<<<<< HEAD
 export async function requestLoginOtp(payload: { phone: string }): Promise<OtpRequestResponse> {
   return apiRequest<OtpRequestResponse>('/api/auth/request-otp', {
     method: 'POST',
@@ -76,6 +80,8 @@ export async function loginWithOtp(payload: { phone: string; otp: string }): Pro
   };
 }
 
+=======
+>>>>>>> 5c0caeb4c7685069d55b1ae0abb69aceeba0ca1e
 export async function registerWorker(payload: WorkerRegisterPayload): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/register',
