@@ -25,13 +25,13 @@ export default function FactoryTab() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
-  const [title, setTitle] = useState('Production Supervisor');
-  const [area, setArea] = useState('Jeedimetla');
-  const [shift, setShift] = useState('General');
-  const [skills, setSkills] = useState('Line balancing, OEE, Team handling');
-  const [description, setDescription] = useState('Lead shift operations and maintain production targets.');
-  const [payMin, setPayMin] = useState('28000');
-  const [payMax, setPayMax] = useState('40000');
+  const [title, setTitle] = useState('');
+  const [area, setArea] = useState('');
+  const [shift, setShift] = useState('');
+  const [skills, setSkills] = useState('');
+  const [description, setDescription] = useState('');
+  const [payMin, setPayMin] = useState('');
+  const [payMax, setPayMax] = useState('');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export default function FactoryTab() {
         ) : null}
       </SectionCard>
 
-      <SectionCard title="Post a new job" subtitle="This form is connected to POST /api/jobs">
+      <SectionCard title="Post a new job" subtitle="">
         <InputField icon="briefcase-outline" placeholder="Job title" value={title} onChangeText={setTitle} />
         <InputField icon="location-outline" placeholder="Industrial area" value={area} onChangeText={setArea} />
         <InputField icon="time-outline" placeholder="Shift" value={shift} onChangeText={setShift} />

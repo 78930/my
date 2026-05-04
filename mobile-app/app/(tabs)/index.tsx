@@ -37,20 +37,9 @@ export default function HomeTab() {
 
       
 
-      <View style={styles.statsRow}>
-        <StatCard icon="people-outline" value={user?.type === 'worker' ? 'Worker' : 'Factory'} label="Account type" />
-        <StatCard icon="business-outline" value={profile ? 'Connected' : 'Pending'} label="Profile sync" />
-        <StatCard icon="cloud-outline" value={getApiBaseUrl() ? 'Online' : 'Missing URL'} label="API status" />
-      </View>
+     
 
 
-      <SectionCard title="Target industrial areas" subtitle="Cluster-based discovery across Hyderabad">
-        <View style={styles.pillsWrap}>
-          {industrialAreas.map((area) => (
-            <Pill key={area} label={area} />
-          ))}
-        </View>
-      </SectionCard>
 
       <SectionCard title="Quick actions">
         <View style={styles.quickGrid}>
