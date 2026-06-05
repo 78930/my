@@ -1,0 +1,16 @@
+# Environment secrets — never commit
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+.expo/
+
+# OS
+.DS_Store
+Thumbs.db

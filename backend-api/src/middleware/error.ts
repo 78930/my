@@ -9,8 +9,9 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
   console.error(err);
 
   if (err instanceof ZodError) {
+    const firstIssue = err.issues[0];
     return res.status(400).json({
-      message: "Validation failed",
+      message: firstIssue?.message ?? "Validation failed",
       issues: err.issues,
     });
   }

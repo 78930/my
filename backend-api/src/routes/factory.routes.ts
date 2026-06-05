@@ -82,7 +82,7 @@ router.get(
     const [openJobs, applications, shortlisted, hires] = await Promise.all([
       JobModel.countDocuments({ factoryUser: req.user!.id, status: "OPEN" }),
       ApplicationModel.countDocuments({ job: { $in: jobIds } }),
-      ApplicationModel.countDocuments({ job: { $in: jobIds }, status: "SHORTLISTED" }),
+      ApplicationModel.countDocuments({ job: { $in: jobIds }, status: { $in: ["SHORTLISTED", "HIRED"] } }),
       HireModel.countDocuments({ factoryUser: req.user!.id }),
     ]);
 

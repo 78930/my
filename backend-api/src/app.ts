@@ -10,16 +10,21 @@ import { errorHandler, notFound } from "./middleware/error.js";
 
 const app = express();
 
+const allowedOrigins =
+  env.clientOrigin === "*"
+    ? true
+    : env.clientOrigin.split(",").map((o) => o.trim());
+
 app.use(
   cors({
-    origin: env.clientOrigin === "*" ? true : env.clientOrigin,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => {
-  res.json({ status: "ok", service: "sketu-backend" });
+  res.json({ status: "ok", service: "sketu-backend", authVersion: 2 });
 });
 
 app.use("/api/auth", authRoutes);
