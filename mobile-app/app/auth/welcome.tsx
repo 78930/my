@@ -11,95 +11,173 @@ export default function WelcomeScreen() {
   const { t } = useTranslation();
 
   return (
-    <Screen>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>Sketu</Text>
-          <Text style={styles.sub}>{t('auth.welcomeSubtitle')}</Text>
+    <Screen contentContainerStyle={styles.screenContent}>
+
+      {/* Top: Branding */}
+      <View>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.brand}>Sketu</Text>
+            <Text style={styles.sub}>{t('auth.welcomeSubtitle')}</Text>
+          </View>
+          <View style={styles.cityBadge}>
+            <Text style={styles.cityText}></Text>
+          </View>
         </View>
-        <View style={styles.cityBadge}>
-          <Text style={styles.cityText}></Text>
-        </View>
+
+        <LanguageSelector />
       </View>
 
-      <LanguageSelector />
-
+      {/* Bottom: Role selection card */}
       <View style={styles.selectWrap}>
         <Text style={styles.selectTitle}>{t('auth.chooseUsage')}</Text>
 
         <View style={styles.optionRow}>
+          {/* Worker card */}
           <Pressable
             onPress={() => router.push({ pathname: '/auth/login', params: { type: 'worker' } })}
             style={[styles.choiceCard, styles.choiceOrange]}
           >
-            <Ionicons name="person-outline" size={24} color={colors.primary} />
-            <Text style={styles.choiceTitle}>{t('userType.worker')}</Text>
-            <Text style={styles.choiceText}>{t('auth.workerChoiceText')}</Text>
-            <Text style={styles.choiceAction}>{t('auth.loginAsWorker')}</Text>
+            <View style={[styles.iconWrap, styles.iconOrange]}>
+              <Ionicons name="person-outline" size={26} color={colors.primary} />
+            </View>
+            <View style={styles.choiceTextWrap}>
+              <Text style={styles.choiceTitle}>{t('userType.worker')}</Text>
+              <Text style={styles.choiceText}>{t('auth.workerChoiceText')}</Text>
+              <Text style={styles.choiceAction}>{t('auth.loginAsWorker')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
           </Pressable>
 
+          {/* Factory card */}
           <Pressable
             onPress={() => router.push({ pathname: '/auth/login', params: { type: 'factory' } })}
             style={[styles.choiceCard, styles.choiceDark]}
           >
-            <Ionicons name="business-outline" size={24} color={colors.panel} />
-            <Text style={styles.choiceTitle}>{t('userType.factory')}</Text>
-            <Text style={styles.choiceText}>{t('auth.factoryChoiceText')}</Text>
-            <Text style={styles.choiceAction}>{t('auth.loginAsFactory')}</Text>
+            <View style={[styles.iconWrap, styles.iconDark]}>
+              <Ionicons name="business-outline" size={26} color={colors.panel} />
+            </View>
+            <View style={styles.choiceTextWrap}>
+              <Text style={styles.choiceTitle}>{t('userType.factory')}</Text>
+              <Text style={styles.choiceText}>{t('auth.factoryChoiceText')}</Text>
+              <Text style={styles.choiceAction}>{t('auth.loginAsFactory')}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textSoft} />
           </Pressable>
         </View>
 
+        {/* Sign-up buttons */}
         <View style={styles.buttonsRow}>
           <Pressable
             style={styles.secondaryButton}
             onPress={() => router.push({ pathname: '/auth/signup', params: { type: 'worker' } })}
           >
+            <Ionicons name="person-add-outline" size={16} color={colors.textInverse} style={styles.btnIcon} />
             <Text style={styles.secondaryButtonText}>{t('auth.workerSignup')}</Text>
           </Pressable>
           <Pressable
             style={styles.primaryButton}
             onPress={() => router.push({ pathname: '/auth/signup', params: { type: 'factory' } })}
           >
+            <Ionicons name="business-outline" size={16} color={colors.textInverse} style={styles.btnIcon} />
             <Text style={styles.primaryButtonText}>{t('auth.factorySignup')}</Text>
           </Pressable>
         </View>
       </View>
+
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { color: colors.textInverse, fontSize: 30, fontWeight: '800' },
-  sub: { color: colors.textMuted, marginTop: 4 },
-  cityBadge: { backgroundColor: colors.primary, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  screenContent: {
+    flexGrow: 1,
+  },
+
+  /* Header */
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  brand: { color: colors.textInverse, fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+  sub: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
+  cityBadge: {
+    backgroundColor: colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
   cityText: { color: colors.textInverse, fontWeight: '700', fontSize: 12 },
-  selectWrap: { backgroundColor: colors.card, borderRadius: 28, padding: 16, gap: 12 },
-  selectTitle: { color: colors.text, fontSize: 18, fontWeight: '800' },
-  optionRow: { flexDirection: 'row', gap: 12 },
-  choiceCard: { flex: 1, borderRadius: 24, padding: 16, borderWidth: 1 },
-  choiceOrange: { backgroundColor: colors.primarySoft, borderColor: '#fdba74' },
-  choiceDark: { backgroundColor: '#f8fafc', borderColor: colors.border },
-  choiceTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 10 },
-  choiceText: { color: colors.textSoft, marginTop: 6, lineHeight: 19, fontSize: 12 },
-  choiceAction: { color: colors.primary, marginTop: 12, fontWeight: '700', fontSize: 12 },
+
+  /* Role selection card */
+  selectWrap: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: 28,
+    padding: 20,
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  selectTitle: { color: colors.text, fontSize: 20, fontWeight: '800' },
+
+  optionRow: { flexDirection: 'column', gap: 12, flex: 1 },
+
+  choiceCard: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  choiceOrange: { backgroundColor: '#fff7ed', borderColor: '#fed7aa' },
+  choiceDark:   { backgroundColor: '#f8fafc', borderColor: '#e2e8f0' },
+
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconOrange: { backgroundColor: 'rgba(249,115,22,0.12)' },
+  iconDark:   { backgroundColor: 'rgba(15,23,42,0.07)' },
+
+  choiceTextWrap: { flex: 1 },
+  choiceTitle: { color: colors.text, fontWeight: '800', fontSize: 16 },
+  choiceText:  { color: colors.textSoft, marginTop: 3, lineHeight: 18, fontSize: 12 },
+  choiceAction:{ color: colors.primary, marginTop: 6, fontWeight: '700', fontSize: 12 },
+
+  /* Sign-up buttons */
   buttonsRow: { flexDirection: 'row', gap: 10 },
   secondaryButton: {
     flex: 1,
-    backgroundColor: colors.panel,
-    borderRadius: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    backgroundColor: colors.panel,
+    borderRadius: 14,
+    paddingVertical: 15,
+    gap: 6,
   },
-  secondaryButtonText: { color: colors.textInverse, fontWeight: '800' },
+  secondaryButtonText: { color: colors.textInverse, fontWeight: '800', fontSize: 14 },
   primaryButton: {
     flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: 16,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingVertical: 15,
+    gap: 6,
   },
-  primaryButtonText: { color: colors.textInverse, fontWeight: '800' },
+  primaryButtonText: { color: colors.textInverse, fontWeight: '800', fontSize: 14 },
+  btnIcon: { marginRight: 2 },
 });

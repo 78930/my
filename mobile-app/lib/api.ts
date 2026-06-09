@@ -1,3 +1,5 @@
+import Constants from 'expo-constants';
+
 export class ApiError extends Error {
   status: number;
   data?: unknown;
@@ -10,7 +12,13 @@ export class ApiError extends Error {
   }
 }
 
-export const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+function resolveApiBaseUrl() {
+  const fromExtra = Constants.expoConfig?.extra?.apiBaseUrl;
+  const fromEnv = process.env.EXPO_PUBLIC_API_BASE_URL;
+  return String(fromExtra || fromEnv || '').replace(/\/$/, '');
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export function hasApiBaseUrl() {
   return Boolean(API_BASE_URL);
@@ -21,7 +29,7 @@ export function getApiBaseUrl() {
 }
 
 export function getApiConfigError() {
-  return 'Set EXPO_PUBLIC_API_BASE_URL in your .env file before using the live API.';
+  return 'API URL is not configured. Restart Expo after saving .env (npx expo start -c).';
 }
 
 type RequestOptions = {
@@ -50,14 +58,41 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   const data = text ? safeJsonParse(text) : null;
 
   if (!response.ok) {
-    const message =
-      typeof data === 'object' && data && 'message' in data && typeof (data as { message?: unknown }).message === 'string'
-        ? (data as { message: string }).message
-        : 'Request failed';
-    throw new ApiError(message, response.status, data);
+    throw new ApiError(getErrorMessage(data), response.status, data);
   }
 
   return data as T;
+}
+
+function getErrorMessage(data: unknown) {
+  if (typeof data !== 'object' || !data) {
+    return 'Request failed';
+  }
+
+  const payload = data as {
+    message?: unknown;
+    issues?: Array<{ message?: string; path?: Array<string | number> }>;
+  };
+
+  if (Array.isArray(payload.issues) && payload.issues.length > 0) {
+    const paths = payload.issues.map((issue) => issue.path?.[0]).filter(Boolean);
+    const wantsLegacyAuth = paths.includes('email') || paths.includes('password');
+
+    if (wantsLegacyAuth) {
+      return `Wrong API server (${API_BASE_URL}). Stop Expo, run "npx expo start -c", and ensure backend is running on your PC.`;
+    }
+
+    const details = payload.issues
+      .map((issue) => {
+        const field = issue.path?.length ? String(issue.path.join('.')) : 'field';
+        return issue.message ? `${field}: ${issue.message}` : field;
+      })
+      .join('; ');
+
+    return details || (typeof payload.message === 'string' ? payload.message : 'Request failed');
+  }
+
+  return typeof payload.message === 'string' ? payload.message : 'Request failed';
 }
 
 function safeJsonParse(value: string) {

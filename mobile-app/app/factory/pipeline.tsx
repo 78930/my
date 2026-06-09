@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Notice } from '../../components/ui/Notice';
 import { Pill } from '../../components/ui/Pill';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -141,11 +142,10 @@ export default function PipelineScreen() {
           </Pressable>
         </View>
 
-        {notice ? (
-          <View style={styles.noticeBox}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <Notice
+          message={notice}
+          variant={notice.includes('shortlisted') || notice.includes('hired') ? 'success' : 'error'}
+        />
 
         <Text style={styles.label}>Select job</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
@@ -168,16 +168,16 @@ export default function PipelineScreen() {
         ) : null}
       </SectionCard>
 
-      {loadingJobs ? <EmptyState title="Loading jobs" message="Fetching your factory job posts." /> : null}
-      {!loadingJobs && error ? <EmptyState title="Pipeline unavailable" message={error} /> : null}
+      {loadingJobs ? <EmptyState icon="hourglass-outline" title="Loading jobs" message="Fetching your factory job posts." /> : null}
+      {!loadingJobs && error ? <EmptyState icon="cloud-offline-outline" title="Pipeline unavailable" message={error} /> : null}
       {!loadingJobs && !error && !jobs.length ? (
-        <EmptyState title="No factory jobs yet" message="Post a job in the Factory tab to start building your candidate pipeline." />
+        <EmptyState icon="briefcase-outline" title="No factory jobs yet" message="Post a job in the Factory tab to start building your candidate pipeline." />
       ) : null}
       {!loadingJobs && !error && jobs.length && loadingApplications ? (
-        <EmptyState title="Loading applications" message="Fetching candidates for the selected job." />
+        <EmptyState icon="hourglass-outline" title="Loading applications" message="Fetching candidates for the selected job." />
       ) : null}
       {!loadingJobs && !error && jobs.length && !loadingApplications && !applications.length ? (
-        <EmptyState title="No applicants yet" message="Share the job and wait for worker applications to appear here." />
+        <EmptyState icon="people-outline" title="No applicants yet" message="Share the job and wait for worker applications to appear here." />
       ) : null}
       {!loadingJobs && !error && !loadingApplications
         ? applications.map((item) => (
@@ -218,12 +218,6 @@ const styles = StyleSheet.create({
   refreshText: { color: colors.primary, fontWeight: '800' },
   label: { color: colors.text, fontWeight: '700' },
   row: { gap: 8 },
-  noticeBox: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 16,
-    padding: 12,
-  },
-  noticeText: { color: '#1d4ed8', lineHeight: 20 },
   jobSummary: {
     backgroundColor: '#f8fafc',
     borderRadius: 18,

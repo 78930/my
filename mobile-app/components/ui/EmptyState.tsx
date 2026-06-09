@@ -6,12 +6,15 @@ import { colors } from '../../constants/colors';
 type Props = {
   title: string;
   message: string;
+  icon?: React.ComponentProps<typeof Ionicons>['name'];
 };
 
-export function EmptyState({ title, message }: Props) {
+export function EmptyState({ title, message, icon = 'search-outline' }: Props) {
   return (
     <View style={styles.wrap}>
-      <Ionicons name="search-outline" size={28} color={colors.primary} />
+      <View style={styles.iconWrap}>
+        <Ionicons name={icon} size={28} color={colors.primary} />
+      </View>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
     </View>
@@ -21,20 +24,30 @@ export function EmptyState({ title, message }: Props) {
 const styles = StyleSheet.create({
   wrap: {
     backgroundColor: colors.card,
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 20,
+    padding: 28,
     alignItems: 'center',
+    gap: 8,
+  },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   title: {
-    marginTop: 10,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: colors.text,
+    textAlign: 'center',
   },
   message: {
-    marginTop: 6,
     color: colors.textSoft,
     textAlign: 'center',
     lineHeight: 20,
+    fontSize: 13,
   },
 });

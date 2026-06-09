@@ -48,7 +48,7 @@ export default function TalentTab() {
 
   return (
     <Screen>
-      <SectionCard title="Talent" subtitle={` ${items.length} profile${items.length === 1 ? '' : 's'}`}>
+      <SectionCard title="Talent" subtitle={`${items.length} profile${items.length === 1 ? '' : 's'} found`}>
         <InputField
           icon="search-outline"
           placeholder="Search workers, PLC, CNC, QA..."
@@ -71,10 +71,10 @@ export default function TalentTab() {
         </ScrollView>
       </SectionCard>
 
-      {loading ? <EmptyState title="Loading workers" message="Fetching live worker profiles from the Sketu backend." /> : null}
-      {!loading && error ? <EmptyState title="Unable to load worker profiles" message={error} /> : null}
+      {loading ? <EmptyState icon="hourglass-outline" title="Loading workers" message="Fetching live worker profiles…" /> : null}
+      {!loading && error ? <EmptyState icon="cloud-offline-outline" title="Unable to load profiles" message={error} /> : null}
       {!loading && !error && !items.length ? (
-        <EmptyState title="No worker profiles found" message="Try another area, role or search term." />
+        <EmptyState icon="people-outline" title="No profiles found" message="Try another area, role or search term." />
       ) : null}
       {!loading && !error ? items.map((worker) => <WorkerCard key={worker.id} worker={worker} />) : null}
     </Screen>

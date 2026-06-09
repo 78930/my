@@ -21,19 +21,37 @@ export default function LoginScreen() {
   );
 
   const { signIn, isSubmitting } = useAuth();
-  const [email, setEmail] = useState(type === 'factory' ? '' : '');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
 
   async function handleLogin() {
     setError('');
+
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+
+    if (trimmedName.length < 2) {
+      setError(t('auth.nameRequired'));
+      return;
+    }
+
+    if (trimmedPhone.replace(/\D/g, '').length < 10) {
+      setError(t('auth.phoneRequired'));
+      return;
+    }
+
     try {
-      await signIn({ email, password });
+      await signIn({ role: type, name: trimmedName, phone: trimmedPhone });
       router.replace('/(tabs)');
     } catch (err) {
-      const message =
-        err instanceof ApiError ? err.message : t('auth.loginFailed');
-      setError(message);
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof TypeError && err.message.includes('Network')) {
+        setError(t('auth.networkError'));
+      } else {
+        setError(t('auth.loginFailed'));
+      }
     }
   }
 
@@ -47,18 +65,18 @@ export default function LoginScreen() {
         subtitle={t('auth.loginSubtitle')}
       >
         <InputField
-          icon="mail-outline"
-          placeholder={t('auth.emailPlaceholder')}
-          value={email}
-          onChangeText={setEmail}
+          icon="person-outline"
+          placeholder={t('auth.namePlaceholder')}
+          value={name}
+          onChangeText={setName}
         />
 
         <InputField
-          icon="lock-closed-outline"
-          placeholder={t('auth.passwordPlaceholder')}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          icon="call-outline"
+          placeholder={t('auth.phonePlaceholder')}
+          value={phone}
+          onChangeText={setPhone}
+          keyboardType="phone-pad"
         />
 
         {error ? (
@@ -96,9 +114,6 @@ export default function LoginScreen() {
           </Text>
         </Pressable>
 
-        <Pressable style={styles.link} onPress={() => router.push('/auth/otp-login')}>
-          <Text style={styles.linkText}>{t('auth.loginWithOtp')}</Text>
-        </Pressable>
       </SectionCard>
     </Screen>
   );
@@ -109,7 +124,7 @@ const styles = StyleSheet.create({
   backButton: {
     flex: 1,
     backgroundColor: '#e2e8f0',
-    borderRadius: 16,
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
   },
@@ -117,7 +132,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     flex: 1,
     backgroundColor: colors.primary,
-    borderRadius: 16,
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
     opacity: 1,
@@ -125,10 +140,11 @@ const styles = StyleSheet.create({
   primaryText: { color: colors.textInverse, fontWeight: '800' },
   errorBox: {
     backgroundColor: '#fef2f2',
-    borderRadius: 16,
+    borderRadius: 999,
     padding: 12,
   },
   errorText: { color: '#b91c1c', lineHeight: 20 },
   link: { alignItems: 'center', marginTop: 4 },
   linkText: { color: colors.primary, fontWeight: '700' },
+  apiHint: { color: colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 8 },
 });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 import { router } from 'expo-router';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
@@ -9,6 +9,7 @@ import { industrialAreas } from '../../constants/areas';
 import { mostDemandingRoles } from '../../constants/roles';
 import { JobCard } from '../../components/jobs/JobCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Notice } from '../../components/ui/Notice';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
 import { Job } from '../../types';
@@ -108,17 +109,16 @@ export default function JobsTab() {
           ))}
         </ScrollView>
 
-        {notice ? (
-          <View style={styles.noticeBox}>
-            <Text style={styles.noticeText}>{notice}</Text>
-          </View>
-        ) : null}
+        <Notice
+          message={notice}
+          variant={notice.includes('successfully') || notice.includes('saved') ? 'success' : notice.includes('already') ? 'warning' : 'error'}
+        />
       </SectionCard>
 
-      {loading ? <EmptyState title="Loading jobs" message="Fetching live openings from the Sketu backend." /> : null}
-      {!loading && error ? <EmptyState title="Unable to load jobs" message={error} /> : null}
+      {loading ? <EmptyState icon="hourglass-outline" title="Loading jobs" message="Fetching live openings…" /> : null}
+      {!loading && error ? <EmptyState icon="cloud-offline-outline" title="Unable to load jobs" message={error} /> : null}
       {!loading && !error && !items.length ? (
-        <EmptyState title="No jobs found" message="Try another area, role or search." />
+        <EmptyState icon="briefcase-outline" title="No jobs found" message="Try another area, role or search." />
       ) : null}
       {!loading && !error
         ? items.map((job) => (
@@ -138,12 +138,6 @@ export default function JobsTab() {
 }
 
 const styles = StyleSheet.create({
-  label: { color: colors.text, fontWeight: '700' },
+  label: { color: colors.text, fontWeight: '700', fontSize: 13 },
   row: { gap: 8 },
-  noticeBox: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 16,
-    padding: 12,
-  },
-  noticeText: { color: '#1d4ed8', lineHeight: 20 },
 });

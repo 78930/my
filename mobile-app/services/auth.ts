@@ -1,26 +1,10 @@
 import { apiRequest } from '../lib/api';
 import { mapAuthUser, mapFactoryProfile, mapWorkerProfile } from '../lib/mappers';
-import { AuthUser, FactoryProfile, WorkerProfile } from '../types';
+import { AuthUser, FactoryProfile, UserType, WorkerProfile } from '../types';
 
-export type WorkerRegisterPayload = {
-  fullName: string;
-  email: string;
+export type SimpleRegisterPayload = {
+  name: string;
   phone: string;
-  password: string;
-  preferredAreas: string[];
-  preferredRoles: string[];
-  skills: string[];
-  preferredShifts: string[];
-};
-
-export type FactoryRegisterPayload = {
-  companyName: string;
-  hrName: string;
-  email: string;
-  phone: string;
-  password: string;
-  industrialAreas: string[];
-  description: string;
 };
 
 export type SessionPayload = {
@@ -35,12 +19,16 @@ export type OtpRequestResponse = {
   otpCode?: string;
 };
 
-export async function login(payload: { email: string; password: string }): Promise<SessionPayload> {
+export async function login(payload: { role: UserType; name: string; phone: string }): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/login',
     {
       method: 'POST',
-      body: payload,
+      body: {
+        role: payload.role === 'factory' ? 'FACTORY' : 'WORKER',
+        name: payload.name,
+        phone: payload.phone,
+      },
     }
   );
 
@@ -76,14 +64,15 @@ export async function loginWithOtp(payload: { phone: string; otp: string }): Pro
   };
 }
 
-export async function registerWorker(payload: WorkerRegisterPayload): Promise<SessionPayload> {
+export async function registerWorker(payload: SimpleRegisterPayload): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/register',
     {
       method: 'POST',
       body: {
         role: 'WORKER',
-        ...payload,
+        name: payload.name,
+        phone: payload.phone,
       },
     }
   );
@@ -96,14 +85,15 @@ export async function registerWorker(payload: WorkerRegisterPayload): Promise<Se
   };
 }
 
-export async function registerFactory(payload: FactoryRegisterPayload): Promise<SessionPayload> {
+export async function registerFactory(payload: SimpleRegisterPayload): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/register',
     {
       method: 'POST',
       body: {
         role: 'FACTORY',
-        ...payload,
+        name: payload.name,
+        phone: payload.phone,
       },
     }
   );

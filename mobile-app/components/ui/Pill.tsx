@@ -10,8 +10,13 @@ type Props = {
 
 export function Pill({ label, active = false, onPress }: Props) {
   return (
-    <Pressable onPress={onPress} style={[styles.base, active && styles.active]}>
-      <Text style={[styles.text, active && styles.textActive]}>{label}</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.base, active && styles.active, pressed && styles.pressed]}
+    >
+      <Text style={[styles.text, active && styles.textActive]} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -23,11 +28,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderDark,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 9,
   },
   active: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+  },
+  pressed: {
+    opacity: 0.75,
   },
   text: {
     color: colors.textMuted,

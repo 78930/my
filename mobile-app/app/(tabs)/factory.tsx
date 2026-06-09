@@ -11,6 +11,7 @@ import { getFactoryDashboard, listFactoryJobs } from '../../services/factory';
 import { createJob } from '../../services/jobs';
 import { InputField } from '../../components/ui/InputField';
 import { ApiError } from '../../lib/api';
+import { Notice } from '../../components/ui/Notice';
 
 const initialSummary: FactoryDashboardSummary = {
   openJobs: 0,
@@ -75,6 +76,11 @@ export default function FactoryTab() {
       return;
     }
 
+    if (!title.trim()) { setMessage('Job title is required.'); return; }
+    if (!area.trim()) { setMessage('Industrial area is required.'); return; }
+    if (!shift.trim()) { setMessage('Shift is required.'); return; }
+    if (description.trim().length < 10) { setMessage('Description must be at least 10 characters.'); return; }
+
     setCreating(true);
     setMessage('');
     try {
@@ -133,11 +139,10 @@ export default function FactoryTab() {
           </View>
         </View>
 
-        {message ? (
-          <View style={styles.messageBox}>
-            <Text style={styles.messageText}>{message}</Text>
-          </View>
-        ) : null}
+        <Notice
+          message={message}
+          variant={message.includes('successfully') ? 'success' : message.includes('required') || message.includes('must') ? 'warning' : 'error'}
+        />
       </SectionCard>
 
       <SectionCard title="Post a new job" subtitle="">
@@ -146,7 +151,7 @@ export default function FactoryTab() {
         <InputField icon="time-outline" placeholder="Shift" value={shift} onChangeText={setShift} />
         <InputField
           icon="document-text-outline"
-          placeholder="Job description"
+          placeholder="Job description (min 10 characters)"
           value={description}
           onChangeText={setDescription}
         />
@@ -227,12 +232,6 @@ const styles = StyleSheet.create({
   actionCard: { flex: 1, backgroundColor: '#f8fafc', borderRadius: 22, padding: 16 },
   actionTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 10 },
   actionText: { color: colors.textSoft, marginTop: 6, lineHeight: 19, fontSize: 12 },
-  messageBox: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 16,
-    padding: 12,
-  },
-  messageText: { color: '#1d4ed8', lineHeight: 20 },
   inlineInputs: { flexDirection: 'row', gap: 10 },
   primaryButton: {
     backgroundColor: colors.primary,

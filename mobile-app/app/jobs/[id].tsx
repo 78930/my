@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Screen } from '../../components/ui/Screen';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { Notice } from '../../components/ui/Notice';
 import { JobDetailCard } from '../../components/jobs/JobDetailCard';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -93,15 +94,14 @@ export default function JobDetailsScreen() {
         </Pressable>
       </View>
 
-      {loading ? <EmptyState title="Loading job" message="Fetching full job details from the backend." /> : null}
-      {!loading && error ? <EmptyState title="Unable to load job" message={error} /> : null}
+      {loading ? <EmptyState icon="hourglass-outline" title="Loading job" message="Fetching job details…" /> : null}
+      {!loading && error ? <EmptyState icon="cloud-offline-outline" title="Unable to load job" message={error} /> : null}
       {!loading && !error && job ? <JobDetailCard job={job} /> : null}
 
-      {notice ? (
-        <View style={styles.noticeBox}>
-          <Text style={styles.noticeText}>{notice}</Text>
-        </View>
-      ) : null}
+      <Notice
+        message={notice}
+        variant={notice.includes('successfully') || notice.includes('saved') ? 'success' : notice.includes('already') ? 'warning' : notice ? 'error' : 'info'}
+      />
 
       {job ? (
         <View style={styles.actionRow}>
@@ -109,7 +109,7 @@ export default function JobDetailsScreen() {
             <Text style={styles.secondaryButtonText}>Saved jobs</Text>
           </Pressable>
           <Pressable style={styles.primaryButton} onPress={handleApply} disabled={submitting}>
-            <Text style={styles.primaryButtonText}>{submitting ? 'Applying...' : 'Apply now'}</Text>
+            <Text style={styles.primaryButtonText}>{submitting ? 'Applying…' : 'Apply now'}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -128,13 +128,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.panel,
   },
-  noticeBox: { backgroundColor: '#eff6ff', borderRadius: 16, padding: 12 },
-  noticeText: { color: '#1d4ed8', lineHeight: 20 },
   actionRow: { flexDirection: 'row', gap: 10 },
   secondaryButton: {
     flex: 1,
     backgroundColor: '#e2e8f0',
-    borderRadius: 16,
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
   },
@@ -142,7 +140,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     flex: 1,
     backgroundColor: colors.primary,
-    borderRadius: 16,
+    borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
   },

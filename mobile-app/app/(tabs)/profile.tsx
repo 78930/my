@@ -303,7 +303,7 @@ export default function ProfileTab() {
 
       {isFactory ? (
         <>
-          <SectionCard title="Company details" subtitle="These values are saved to /api/factories/me/profile">
+          <SectionCard title="Company details" subtitle="Edit your company name, HR contact, size and description.">
             <InputField icon="business-outline" placeholder="Company name" value={companyName} onChangeText={setCompanyName} />
             <InputField icon="people-outline" placeholder="HR / contact person" value={hrName} onChangeText={setHrName} />
             <InputField icon="grid-outline" placeholder="Company size" value={companySize} onChangeText={setCompanySize} />

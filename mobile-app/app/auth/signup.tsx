@@ -23,9 +23,7 @@ export default function SignupScreen() {
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [hrName, setHrName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('password123');
   const [selectedArea, setSelectedArea] = useState('Jeedimetla');
   const [selectedRole, setSelectedRole] = useState(
     type === 'factory' ? 'Plant Head / Factory Head' : 'Production Supervisor'
@@ -40,18 +38,14 @@ export default function SignupScreen() {
         await signUpFactory({
           companyName: companyName || 'Sketu Factory',
           hrName: hrName || 'HR Manager',
-          email,
           phone,
-          password,
           industrialAreas: [selectedArea],
           description,
         });
       } else {
         await signUpWorker({
           fullName: fullName || 'Sketu Worker',
-          email,
           phone,
-          password,
           preferredAreas: [selectedArea],
           preferredRoles: [selectedRole],
           skills: [],
@@ -98,15 +92,7 @@ export default function SignupScreen() {
           />
         )}
 
-        <InputField icon="mail-outline" placeholder={t('auth.emailPlaceholder')} value={email} onChangeText={setEmail} />
-        <InputField icon="call-outline" placeholder={t('auth.phonePlaceholder')} value={phone} onChangeText={setPhone} />
-        <InputField
-          icon="lock-closed-outline"
-          placeholder={t('auth.createPasswordPlaceholder')}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <InputField icon="call-outline" placeholder={t('auth.phonePlaceholder')} value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
 
         {type === 'factory' ? (
           <InputField
