@@ -40,3 +40,12 @@ export async function listFactoryJobs(token: string, params?: { status?: string 
   );
   return response.items.map(mapJob);
 }
+
+export async function updateJobStatus(token: string, jobId: string, status: 'OPEN' | 'CLOSED') {
+  const response = await apiRequest<any>(`/api/jobs/${jobId}`, {
+    method: 'PATCH',
+    token,
+    body: { status },
+  });
+  return mapJob(response);
+}

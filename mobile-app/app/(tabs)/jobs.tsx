@@ -12,15 +12,16 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { Notice } from '../../components/ui/Notice';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
-import { Job } from '../../types';
+import { Job, WorkerProfile } from '../../types';
 import { applyToJob, listJobs } from '../../services/jobs';
 import { ApiError } from '../../lib/api';
 import { isJobSaved, toggleSavedJob } from '../../services/savedJobs';
 
 export default function JobsTab() {
-  const { token, isWorker } = useAuth();
-  const [area, setArea] = useState('Jeedimetla');
-  const [role, setRole] = useState('Production Supervisor');
+  const { token, isWorker, profile } = useAuth();
+  const workerProfile = isWorker ? (profile as WorkerProfile | null) : null;
+  const [area, setArea] = useState(() => workerProfile?.preferredAreas?.[0] || 'Jeedimetla');
+  const [role, setRole] = useState(() => workerProfile?.preferredRoles?.[0] || 'Production Supervisor');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);

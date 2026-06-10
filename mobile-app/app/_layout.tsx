@@ -10,24 +10,12 @@ export default function RootLayout() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const initApp = async () => {
-      await loadAppLanguage();
-      setReady(true);
-    };
-
-    initApp();
+    loadAppLanguage().then(() => setReady(true));
   }, []);
 
   if (!ready) {
     return (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          backgroundColor: '#000',
-        }}
-      >
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
         <ActivityIndicator size="large" color="#ffffff" />
       </View>
     );
@@ -41,10 +29,15 @@ export default function RootLayout() {
         <Stack.Screen name="auth" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="factory/pipeline" />
+        <Stack.Screen name="factory/post-job" />
+        <Stack.Screen name="factory/my-jobs" />
+        <Stack.Screen name="factory/edit-job" />
         <Stack.Screen name="jobs/[id]" />
+        <Stack.Screen name="worker/[id]" />
         <Stack.Screen name="worker/applications" />
         <Stack.Screen name="worker/saved" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="notifications" />
       </Stack>
     </AuthProvider>
   );

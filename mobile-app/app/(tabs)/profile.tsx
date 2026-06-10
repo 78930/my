@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -55,6 +55,13 @@ export default function ProfileTab() {
   const [companySize, setCompanySize] = useState('');
   const [description, setDescription] = useState('');
   const [industrialAreaSelection, setIndustrialAreaSelection] = useState<string[]>([]);
+
+  const [customAreaText, setCustomAreaText] = useState('');
+  const [showCustomArea, setShowCustomArea] = useState(false);
+  const [customRoleText, setCustomRoleText] = useState('');
+  const [showCustomRole, setShowCustomRole] = useState(false);
+  const [customFactoryAreaText, setCustomFactoryAreaText] = useState('');
+  const [showCustomFactoryArea, setShowCustomFactoryArea] = useState(false);
 
   const suggestedRoles = useMemo(() => allRoles.slice(0, 18), []);
 
@@ -200,12 +207,17 @@ export default function ProfileTab() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.headerTitle}>{user.name}</Text>
-            <Text style={styles.headerSubtitle}>{user.email}</Text>
+            <Text style={styles.headerSubtitle}>{user.phone || user.email || 'No contact info'}</Text>
           </View>
-          <Pressable style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={16} color={colors.textInverse} />
-            <Text style={styles.logoutText}>Logout</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable style={styles.settingsButton} onPress={() => router.push('/settings')}>
+              <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
+            </Pressable>
+            <Pressable style={styles.logoutButton} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={16} color={colors.textInverse} />
+              <Text style={styles.logoutText}>Logout</Text>
+            </Pressable>
+          </View>
         </View>
 
         {loading ? <Text style={styles.helperText}>Loading profile...</Text> : null}
@@ -242,10 +254,10 @@ export default function ProfileTab() {
             />
           </SectionCard>
 
-          <SectionCard title="Areas and roles" subtitle="Tap quick picks or keep editing with search-based selection later">
+          <SectionCard title="Areas and roles" subtitle="Tap to select, or choose Others to add your own">
             <Text style={styles.label}>Preferred industrial areas</Text>
             <View style={styles.pillsWrap}>
-              {industrialAreas.map((area) => (
+              {[...industrialAreas, ...preferredAreas.filter((a) => !industrialAreas.includes(a))].map((area) => (
                 <Pill
                   key={area}
                   label={area}
@@ -253,11 +265,40 @@ export default function ProfileTab() {
                   onPress={() => setPreferredAreas((items) => toggleArrayItem(items, area))}
                 />
               ))}
+              <Pill
+                label="+ Others"
+                active={showCustomArea}
+                onPress={() => setShowCustomArea((v) => !v)}
+              />
             </View>
+            {showCustomArea ? (
+              <View style={styles.customRow}>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="Type area name..."
+                  placeholderTextColor="#94a3b8"
+                  value={customAreaText}
+                  onChangeText={setCustomAreaText}
+                />
+                <Pressable
+                  style={styles.addBtn}
+                  onPress={() => {
+                    const val = customAreaText.trim();
+                    if (val && !preferredAreas.includes(val)) {
+                      setPreferredAreas((items) => [...items, val]);
+                    }
+                    setCustomAreaText('');
+                    setShowCustomArea(false);
+                  }}
+                >
+                  <Text style={styles.addBtnText}>Add</Text>
+                </Pressable>
+              </View>
+            ) : null}
 
             <Text style={styles.label}>Preferred roles</Text>
             <View style={styles.pillsWrap}>
-              {suggestedRoles.map((role) => (
+              {[...suggestedRoles, ...preferredRoles.filter((r) => !suggestedRoles.includes(r))].map((role) => (
                 <Pill
                   key={role}
                   label={role}
@@ -265,7 +306,36 @@ export default function ProfileTab() {
                   onPress={() => setPreferredRoles((items) => toggleArrayItem(items, role))}
                 />
               ))}
+              <Pill
+                label="+ Others"
+                active={showCustomRole}
+                onPress={() => setShowCustomRole((v) => !v)}
+              />
             </View>
+            {showCustomRole ? (
+              <View style={styles.customRow}>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="Type role or job title..."
+                  placeholderTextColor="#94a3b8"
+                  value={customRoleText}
+                  onChangeText={setCustomRoleText}
+                />
+                <Pressable
+                  style={styles.addBtn}
+                  onPress={() => {
+                    const val = customRoleText.trim();
+                    if (val && !preferredRoles.includes(val)) {
+                      setPreferredRoles((items) => [...items, val]);
+                    }
+                    setCustomRoleText('');
+                    setShowCustomRole(false);
+                  }}
+                >
+                  <Text style={styles.addBtnText}>Add</Text>
+                </Pressable>
+              </View>
+            ) : null}
 
             <InputField
               icon="swap-horizontal-outline"
@@ -317,7 +387,7 @@ export default function ProfileTab() {
 
           <SectionCard title="Industrial coverage" subtitle="Select the areas where your factory hires workers">
             <View style={styles.pillsWrap}>
-              {industrialAreas.map((area) => (
+              {[...industrialAreas, ...industrialAreaSelection.filter((a) => !industrialAreas.includes(a))].map((area) => (
                 <Pill
                   key={area}
                   label={area}
@@ -325,7 +395,36 @@ export default function ProfileTab() {
                   onPress={() => setIndustrialAreaSelection((items) => toggleArrayItem(items, area))}
                 />
               ))}
+              <Pill
+                label="+ Others"
+                active={showCustomFactoryArea}
+                onPress={() => setShowCustomFactoryArea((v) => !v)}
+              />
             </View>
+            {showCustomFactoryArea ? (
+              <View style={styles.customRow}>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="Type area name..."
+                  placeholderTextColor="#94a3b8"
+                  value={customFactoryAreaText}
+                  onChangeText={setCustomFactoryAreaText}
+                />
+                <Pressable
+                  style={styles.addBtn}
+                  onPress={() => {
+                    const val = customFactoryAreaText.trim();
+                    if (val && !industrialAreaSelection.includes(val)) {
+                      setIndustrialAreaSelection((items) => [...items, val]);
+                    }
+                    setCustomFactoryAreaText('');
+                    setShowCustomFactoryArea(false);
+                  }}
+                >
+                  <Text style={styles.addBtnText}>Add</Text>
+                </Pressable>
+              </View>
+            ) : null}
             <View style={styles.quickActions}>
               <Pressable style={styles.softButton} onPress={() => setIndustrialAreaSelection(industrialAreas)}>
                 <Text style={styles.softButtonText}>Select all</Text>
@@ -434,6 +533,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 14,
   },
+  settingsButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: colors.panel,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logoutButton: {
     backgroundColor: colors.panel,
     borderRadius: 14,
@@ -462,5 +569,33 @@ const styles = StyleSheet.create({
   softButtonText: {
     color: colors.primary,
     fontWeight: '800',
+  },
+  customRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  customInput: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.text,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  addBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  addBtnText: {
+    color: '#fff',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });

@@ -5,9 +5,10 @@ import { colors } from '../../constants/colors';
 type Props = {
   children: React.ReactNode;
   contentContainerStyle?: ViewStyle;
+  refreshControl?: React.ReactElement;
 };
 
-export function Screen({ children, contentContainerStyle }: Props) {
+export function Screen({ children, contentContainerStyle, refreshControl }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
@@ -20,6 +21,7 @@ export function Screen({ children, contentContainerStyle }: Props) {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

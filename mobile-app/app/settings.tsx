@@ -1,8 +1,18 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { Screen } from '../components/ui/Screen';
+import { SectionCard } from '../components/ui/SectionCard';
+import { colors } from '../constants/colors';
 import { languageLabels, setAppLanguage, supportedLanguages } from '../lib/language';
+
+const LANG_ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  en: 'language-outline',
+  hi: 'chatbubble-ellipses-outline',
+  te: 'chatbubble-outline',
+};
 
 export default function SettingsScreen() {
   const { t, i18n } = useTranslation();
@@ -12,81 +22,110 @@ export default function SettingsScreen() {
     : 'en';
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('settings.languagePreference')}</Text>
-      <Text style={styles.subtitle}>
-        {t('settings.currentLanguage', { language: languageLabels[currentLanguage] })}
-      </Text>
+    <Screen>
+      {/* Header */}
+      <View style={styles.topBar}>
+        <Pressable style={styles.iconButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back-outline" size={20} color={colors.textInverse} />
+        </Pressable>
+        <Text style={styles.topTitle}>Settings</Text>
+        <View style={styles.spacer} />
+      </View>
 
-      {supportedLanguages.map((language) => (
-        <TouchableOpacity
-          key={language}
-          style={[styles.card, currentLanguage === language && styles.cardActive]}
-          onPress={() => setAppLanguage(language)}
-        >
-          <Text style={[styles.label, currentLanguage === language && styles.active]}>
-            {t(`settings.${language === 'en' ? 'english' : language === 'hi' ? 'hindi' : 'telugu'}`)}
-          </Text>
-        </TouchableOpacity>
-      ))}
+      <SectionCard title="Language" subtitle="Choose the app display language">
+        {supportedLanguages.map((lang) => {
+          const active = currentLanguage === lang;
+          return (
+            <Pressable
+              key={lang}
+              style={[styles.langRow, active && styles.langRowActive]}
+              onPress={() => setAppLanguage(lang)}
+            >
+              <View style={[styles.langIcon, active && styles.langIconActive]}>
+                <Ionicons
+                  name={LANG_ICONS[lang] ?? 'language-outline'}
+                  size={20}
+                  color={active ? colors.primary : colors.textMuted}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.langName, active && styles.langNameActive]}>
+                  {languageLabels[lang]}
+                </Text>
+                <Text style={styles.langCode}>{lang.toUpperCase()}</Text>
+              </View>
+              {active ? (
+                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              ) : (
+                <View style={styles.emptyCheck} />
+              )}
+            </Pressable>
+          );
+        })}
+      </SectionCard>
 
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backText}>{t('common.back')}</Text>
-      </TouchableOpacity>
-    </View>
+      <SectionCard title="About">
+        <View style={styles.aboutRow}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.textMuted} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.aboutLabel}>Sketu</Text>
+            <Text style={styles.aboutValue}>Industrial hiring platform for Hyderabad</Text>
+          </View>
+        </View>
+        <View style={styles.aboutRow}>
+          <Ionicons name="server-outline" size={20} color={colors.textMuted} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.aboutLabel}>Backend</Text>
+            <Text style={styles.aboutValue}>my-1-1iz4.onrender.com</Text>
+          </View>
+        </View>
+      </SectionCard>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#111',
-    padding: 20,
-    justifyContent: 'center',
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  topTitle: { color: colors.textInverse, fontSize: 20, fontWeight: '800' },
+  iconButton: {
+    width: 42, height: 42, borderRadius: 14,
+    backgroundColor: colors.panel,
+    alignItems: 'center', justifyContent: 'center',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#bbb',
-    marginBottom: 20,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#1e1e1e',
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  cardActive: {
-    borderColor: '#4da6ff',
-    backgroundColor: '#162235',
-  },
-  label: {
-    fontSize: 18,
-    color: '#ccc',
-  },
-  active: {
-    color: '#4da6ff',
-    fontWeight: '700',
-  },
-  backButton: {
-    marginTop: 12,
-    paddingVertical: 14,
-    borderRadius: 12,
+  spacer: { width: 42 },
+  langRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    borderWidth: 1,
-    borderColor: '#333',
+    gap: 12,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: '#e2e8f0',
   },
-  backText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  langRowActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#eff6ff',
   },
+  langIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  langIconActive: { backgroundColor: '#dbeafe' },
+  langName: { color: colors.text, fontWeight: '700', fontSize: 15 },
+  langNameActive: { color: colors.primary },
+  langCode: { color: colors.textMuted, fontSize: 12, marginTop: 2 },
+  emptyCheck: { width: 20, height: 20 },
+  aboutRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+  },
+  aboutLabel: { color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 2 },
+  aboutValue: { color: colors.textSoft, fontSize: 13 },
 });

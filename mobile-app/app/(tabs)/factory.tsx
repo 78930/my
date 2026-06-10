@@ -6,12 +6,8 @@ import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
-import { FactoryDashboardSummary, Job } from '../../types';
-import { getFactoryDashboard, listFactoryJobs } from '../../services/factory';
-import { createJob } from '../../services/jobs';
-import { InputField } from '../../components/ui/InputField';
-import { ApiError } from '../../lib/api';
-import { Notice } from '../../components/ui/Notice';
+import { FactoryDashboardSummary } from '../../types';
+import { getFactoryDashboard } from '../../services/factory';
 
 const initialSummary: FactoryDashboardSummary = {
   openJobs: 0,
@@ -21,252 +17,183 @@ const initialSummary: FactoryDashboardSummary = {
 };
 
 export default function FactoryTab() {
-  const { user, token, isFactory } = useAuth();
+  const { user, token, isFactory, signOut } = useAuth();
   const [summary, setSummary] = useState<FactoryDashboardSummary>(initialSummary);
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState('');
-  const [title, setTitle] = useState('');
-  const [area, setArea] = useState('');
-  const [shift, setShift] = useState('');
-  const [skills, setSkills] = useState('');
-  const [description, setDescription] = useState('');
-  const [payMin, setPayMin] = useState('');
-  const [payMax, setPayMax] = useState('');
-  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
-      if (!token || !isFactory) {
-        setLoading(false);
-        return;
-      }
-
+      if (!token || !isFactory) { setLoading(false); return; }
       setLoading(true);
       try {
-        const [summaryData, jobData] = await Promise.all([
-          getFactoryDashboard(token),
-          listFactoryJobs(token, { status: 'OPEN' }),
-        ]);
-        if (!cancelled) {
-          setSummary(summaryData);
-          setJobs(jobData);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          const nextMessage = err instanceof ApiError ? err.message : 'Unable to load dashboard summary';
-          setMessage(nextMessage);
-        }
+        const data = await getFactoryDashboard(token);
+        if (!cancelled) setSummary(data);
+      } catch {
+        // non-critical, show zeros
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, isFactory]);
 
-  async function handleCreateJob() {
-    if (!token || !isFactory) {
-      setMessage('Log in as a factory account to post jobs.');
-      return;
-    }
-
-    if (!title.trim()) { setMessage('Job title is required.'); return; }
-    if (!area.trim()) { setMessage('Industrial area is required.'); return; }
-    if (!shift.trim()) { setMessage('Shift is required.'); return; }
-    if (description.trim().length < 10) { setMessage('Description must be at least 10 characters.'); return; }
-
-    setCreating(true);
-    setMessage('');
-    try {
-      await createJob(token, {
-        title,
-        description,
-        area,
-        shift,
-        skillsRequired: skills.split(',').map((value) => value.trim()).filter(Boolean),
-        payMin: Number(payMin || 0),
-        payMax: Number(payMax || 0),
-        employmentType: 'Full-time',
-      });
-
-      const [nextSummary, nextJobs] = await Promise.all([
-        getFactoryDashboard(token),
-        listFactoryJobs(token, { status: 'OPEN' }),
-      ]);
-      setSummary(nextSummary);
-      setJobs(nextJobs);
-      setMessage('Job posted successfully.');
-    } catch (err) {
-      const nextMessage = err instanceof ApiError ? err.message : 'Unable to create job';
-      setMessage(nextMessage);
-    } finally {
-      setCreating(false);
-    }
-  }
+  const val = (n: number) => (loading ? '…' : String(n));
 
   return (
     <Screen>
-      <SectionCard
-        title="Factory dashboard"
-        subtitle={
-          user?.type === 'factory'
-            ? `Logged in as ${user.name}`
-            : 'Use a factory account to post jobs and view live hiring stats.'
-        }
-      >
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{loading ? '...' : summary.openJobs}</Text>
-            <Text style={styles.statLabel}>Open jobs</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{loading ? '...' : summary.totalApplications}</Text>
-            <Text style={styles.statLabel}>Applications</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{loading ? '...' : summary.shortlisted}</Text>
-            <Text style={styles.statLabel}>Shortlisted</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{loading ? '...' : summary.hires}</Text>
-            <Text style={styles.statLabel}>Hires</Text>
-          </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.brand}>Sketu</Text>
+          <Text style={styles.sub}>
+            {user ? `Welcome, ${user.name}` : 'Factory hiring dashboard'}
+          </Text>
         </View>
-
-        <Notice
-          message={message}
-          variant={message.includes('successfully') ? 'success' : message.includes('required') || message.includes('must') ? 'warning' : 'error'}
-        />
-      </SectionCard>
-
-      <SectionCard title="Post a new job" subtitle="">
-        <InputField icon="briefcase-outline" placeholder="Job title" value={title} onChangeText={setTitle} />
-        <InputField icon="location-outline" placeholder="Industrial area" value={area} onChangeText={setArea} />
-        <InputField icon="time-outline" placeholder="Shift" value={shift} onChangeText={setShift} />
-        <InputField
-          icon="document-text-outline"
-          placeholder="Job description (min 10 characters)"
-          value={description}
-          onChangeText={setDescription}
-        />
-        <InputField
-          icon="build-outline"
-          placeholder="Skills comma separated"
-          value={skills}
-          onChangeText={setSkills}
-        />
-        <View style={styles.inlineInputs}>
-          <View style={{ flex: 1 }}>
-            <InputField icon="cash-outline" placeholder="Min pay" value={payMin} onChangeText={setPayMin} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <InputField icon="cash-outline" placeholder="Max pay" value={payMax} onChangeText={setPayMax} />
-          </View>
-        </View>
-        <Pressable style={styles.primaryButton} onPress={handleCreateJob} disabled={creating}>
-          <Text style={styles.primaryButtonText}>{creating ? 'Posting...' : 'Post job'}</Text>
+        <Pressable
+          style={styles.logoutBtn}
+          onPress={async () => { await signOut(); router.replace('/auth/welcome'); }}
+        >
+          <Ionicons name="log-out-outline" size={18} color={colors.textInverse} />
         </Pressable>
-      </SectionCard>
+      </View>
 
+      {/* Stats row */}
+      <View style={styles.statsRow}>
+        <StatChip icon="briefcase-outline" label="Open jobs" value={val(summary.openJobs)} color="#3b82f6" bg="#eff6ff" />
+        <StatChip icon="people-outline" label="Applied" value={val(summary.totalApplications)} color="#8b5cf6" bg="#f5f3ff" />
+        <StatChip icon="star-outline" label="Shortlisted" value={val(summary.shortlisted)} color="#f59e0b" bg="#fffbeb" />
+        <StatChip icon="checkmark-circle-outline" label="Hired" value={val(summary.hires)} color="#16a34a" bg="#f0fdf4" />
+      </View>
 
-<SectionCard title="Live pipeline" subtitle="Open job-wise candidate pipeline for shortlist and hire">
-  <Pressable style={styles.pipelineButton} onPress={() => router.push('/factory/pipeline')}>
-    <Ionicons name="git-network-outline" size={20} color={colors.textInverse} />
-    <Text style={styles.pipelineButtonText}>Open candidate pipeline</Text>
-  </Pressable>
-
-  {jobs.length ? (
-    <View style={styles.jobList}>
-      {jobs.slice(0, 3).map((job) => (
-        <View key={job.id} style={styles.jobListCard}>
+      {/* First-time nudge */}
+      {!loading && summary.openJobs === 0 ? (
+        <Pressable style={styles.nudgeCard} onPress={() => router.push('/factory/post-job')}>
+          <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.jobListTitle}>{job.role}</Text>
-            <Text style={styles.jobListText}>{job.area} • {job.shift}</Text>
+            <Text style={styles.nudgeTitle}>Post your first job</Text>
+            <Text style={styles.nudgeText}>You have no open jobs yet. Tap here to create your first opening and start receiving applications.</Text>
           </View>
-          <Pressable style={styles.jobListAction} onPress={() => router.push('/factory/pipeline')}>
-            <Text style={styles.jobListActionText}>View</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+      ) : null}
+
+      {/* Quick actions */}
+      <SectionCard title="Quick actions">
+        <View style={styles.quickGrid}>
+          <Pressable style={styles.quickCard} onPress={() => router.push('/factory/post-job')}>
+            <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
+            <Text style={styles.quickTitle}>Post a job</Text>
+            <Text style={styles.quickText}>Create a new opening with role, area, shift and pay details.</Text>
+          </Pressable>
+          <Pressable style={styles.quickCard} onPress={() => router.push('/factory/pipeline')}>
+            <Ionicons name="git-network-outline" size={22} color={colors.primary} />
+            <Text style={styles.quickTitle}>Candidate pipeline</Text>
+            <Text style={styles.quickText}>Move applicants from applied to shortlisted to hired.</Text>
           </Pressable>
         </View>
-      ))}
-    </View>
-  ) : (
-    <Text style={styles.helperText}>Post a job to start receiving applications and manage the pipeline.</Text>
-  )}
-</SectionCard>
 
-      <SectionCard title="Factory actions">
-        <View style={styles.grid}>
-          <View style={styles.actionCard}>
-            <Ionicons name="search-outline" size={24} color={colors.primary} />
-            <Text style={styles.actionTitle}>Search workers</Text>
-            <Text style={styles.actionText}>Use the Talent tab to search live worker profiles by area and role.</Text>
-          </View>
-          <View style={styles.actionCard}>
-            <Ionicons name="briefcase-outline" size={24} color={colors.primary} />
-            <Text style={styles.actionTitle}>Manage jobs</Text>
-            <Text style={styles.actionText}>Create openings and move candidates from applied to shortlisted to hired.</Text>
-          </View>
+        <View style={styles.quickGrid}>
+          <Pressable style={styles.quickCard} onPress={() => router.push('/factory/my-jobs' as never)}>
+            <Ionicons name="list-outline" size={22} color={colors.primary} />
+            <Text style={styles.quickTitle}>My jobs</Text>
+            <Text style={styles.quickText}>View, close or reopen your posted job openings.</Text>
+          </Pressable>
+          <Pressable style={styles.quickCard} onPress={() => router.push('/(tabs)/talent')}>
+            <Ionicons name="search-outline" size={22} color={colors.primary} />
+            <Text style={styles.quickTitle}>Search talent</Text>
+            <Text style={styles.quickText}>Browse live worker profiles by area and role.</Text>
+          </Pressable>
         </View>
+
+        <Pressable style={styles.profileCard} onPress={() => router.push('/(tabs)/profile')}>
+          <Ionicons name="business-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.quickTitle}>Company profile</Text>
+            <Text style={styles.quickText}>Update factory details, location and contact info.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Pressable>
+
+        <Pressable style={styles.pipelineCard} onPress={() => router.push('/factory/pipeline')}>
+          <Ionicons name="layers-outline" size={22} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.quickTitle}>Open candidate pipeline</Text>
+            <Text style={styles.quickText}>See all applications across your open jobs in one view.</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </Pressable>
       </SectionCard>
     </Screen>
   );
 }
 
+function StatChip({ icon, label, value, color, bg }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  value: string;
+  color: string;
+  bg: string;
+}) {
+  return (
+    <View style={[chip.wrap, { backgroundColor: bg }]}>
+      <Ionicons name={icon} size={18} color={color} />
+      <Text style={[chip.value, { color }]}>{value}</Text>
+      <Text style={chip.label}>{label}</Text>
+    </View>
+  );
+}
+
+const chip = StyleSheet.create({
+  wrap: { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', gap: 4 },
+  value: { fontSize: 20, fontWeight: '800' },
+  label: { color: colors.textSoft, fontSize: 10, fontWeight: '600', textAlign: 'center' },
+});
+
 const styles = StyleSheet.create({
-  statsRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  statBox: {
-    width: '48%',
-    backgroundColor: colors.panel,
-    borderRadius: 18,
-    padding: 14,
-  },
-  statValue: { color: colors.textInverse, fontSize: 20, fontWeight: '800' },
-  statLabel: { color: colors.textMuted, marginTop: 4, fontSize: 12 },
-  grid: { flexDirection: 'row', gap: 12 },
-  actionCard: { flex: 1, backgroundColor: '#f8fafc', borderRadius: 22, padding: 16 },
-  actionTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 10 },
-  actionText: { color: colors.textSoft, marginTop: 6, lineHeight: 19, fontSize: 12 },
-  inlineInputs: { flexDirection: 'row', gap: 10 },
-  primaryButton: {
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  brand: { color: colors.textInverse, fontSize: 28, fontWeight: '800' },
+  sub: { color: colors.textMuted, marginTop: 4 },
+  logoutBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     backgroundColor: colors.primary,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: colors.textInverse, fontWeight: '800' },
-  pipelineButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
   },
-  pipelineButtonText: { color: colors.textInverse, fontWeight: '800' },
-  jobList: { gap: 10 },
-  jobListCard: {
+  statsRow: { flexDirection: 'row', gap: 8 },
+  quickGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  quickCard: { flex: 1, backgroundColor: '#f8fafc', borderRadius: 22, padding: 16 },
+  quickTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 10 },
+  quickText: { color: colors.textSoft, marginTop: 6, lineHeight: 19, fontSize: 12 },
+  pipelineCard: {
     backgroundColor: '#f8fafc',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 22,
+    padding: 16,
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     alignItems: 'center',
   },
-  jobListTitle: { color: colors.text, fontWeight: '800' },
-  jobListText: { color: colors.textSoft, marginTop: 4, fontSize: 12 },
-  jobListAction: {
-    backgroundColor: colors.panel,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  profileCard: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 22,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
   },
-  jobListActionText: { color: colors.textInverse, fontWeight: '700', fontSize: 12 },
-  helperText: { color: colors.textSoft, lineHeight: 20 },
+  nudgeCard: {
+    backgroundColor: '#eff6ff',
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#bfdbfe',
+  },
+  nudgeTitle: { color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 4 },
+  nudgeText: { color: colors.textSoft, fontSize: 12, lineHeight: 18 },
 });

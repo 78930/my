@@ -133,6 +133,79 @@ router.post(
   })
 );
 
+// PATCH /api/jobs/:id — factory updates or closes their job
+router.patch(
+  "/:id",
+  requireAuth,
+  requireRole("FACTORY"),
+  asyncHandler<AuthRequest>(async (req, res) => {
+    const { id } = req.params;
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid job id" });
+    }
+
+    const job = await JobModel.findOne({ _id: id, factoryUser: req.user!.id });
+    if (!job) {
+      return res.status(404).json({ message: "Job not found or not yours" });
+    }
+
+    const allowed = ["title", "description", "area", "shift", "skillsRequired", "payMin", "payMax", "employmentType", "status"] as const;
+    const updates: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in req.body) updates[key] = req.body[key];
+    }
+
+    if (updates.status && !["OPEN", "CLOSED"].includes(updates.status as string)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const updated = await JobModel.findByIdAndUpdate(id, updates, { new: true }).populate(
+      "factoryProfile",
+      "companyName hrName industrialAreas description"
+    );
+
+    return res.json(updated);
+  })
+);
+
+// POST /api/jobs/:id/shortlist-worker — factory initiates shortlist for a worker (no prior application needed)
+router.post(
+  "/:id/shortlist-worker",
+  requireAuth,
+  requireRole("FACTORY"),
+  asyncHandler<AuthRequest>(async (req, res) => {
+    const { id } = req.params;
+    const { workerProfileId } = req.body as { workerProfileId?: string };
+
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid job id" });
+    }
+    if (!workerProfileId || !mongoose.isValidObjectId(workerProfileId)) {
+      return res.status(400).json({ message: "workerProfileId is required" });
+    }
+
+    const job = await JobModel.findOne({ _id: id, factoryUser: req.user!.id });
+    if (!job) {
+      return res.status(404).json({ message: "Job not found or not yours" });
+    }
+
+    const workerProfile = await WorkerProfileModel.findById(workerProfileId);
+    if (!workerProfile) {
+      return res.status(404).json({ message: "Worker profile not found" });
+    }
+
+    // Upsert: create application if none exists, then set status to SHORTLISTED
+    const application = await ApplicationModel.findOneAndUpdate(
+      { job: id, workerUser: workerProfile.user },
+      { job: id, workerUser: workerProfile.user, status: "SHORTLISTED", note: "" },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(200).json(application);
+  })
+);
+
 // GET /api/jobs/:id/applications — factory sees applicants for their job
 router.get(
   "/:id/applications",

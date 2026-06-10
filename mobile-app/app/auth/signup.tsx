@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { InputField } from '../../components/ui/InputField';
@@ -28,28 +28,31 @@ export default function SignupScreen() {
   const [selectedRole, setSelectedRole] = useState(
     type === 'factory' ? 'Plant Head / Factory Head' : 'Production Supervisor'
   );
+  const [customArea, setCustomArea] = useState('');
+  const [customRole, setCustomRole] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
+  const finalArea = selectedArea === 'Others' ? customArea.trim() : selectedArea;
+  const finalRole = selectedRole === 'Others' ? customRole.trim() : selectedRole;
+
   async function handleSignup() {
     setError('');
+    const nameVal = type === 'factory' ? (companyName.trim() || hrName.trim()) : fullName.trim();
+    if (nameVal.length < 2) { setError(t('auth.nameRequired')); return; }
+    if (phone.trim().replace(/\D/g, '').length < 10) { setError(t('auth.phoneRequired')); return; }
+    if (selectedArea === 'Others' && !customArea.trim()) { setError('Please enter your industrial area.'); return; }
+    if (type === 'worker' && selectedRole === 'Others' && !customRole.trim()) { setError('Please enter your primary role.'); return; }
     try {
       if (type === 'factory') {
         await signUpFactory({
-          companyName: companyName || 'Sketu Factory',
-          hrName: hrName || 'HR Manager',
+          name: companyName.trim() || hrName.trim(),
           phone,
-          industrialAreas: [selectedArea],
-          description,
         });
       } else {
         await signUpWorker({
-          fullName: fullName || 'Sketu Worker',
+          name: fullName.trim(),
           phone,
-          preferredAreas: [selectedArea],
-          preferredRoles: [selectedRole],
-          skills: [],
-          preferredShifts: ['General'],
         });
       }
       router.replace('/(tabs)');
@@ -108,7 +111,7 @@ export default function SignupScreen() {
             {type === 'factory' ? t('auth.industrialArea') : t('auth.preferredIndustrialArea')}
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-            {industrialAreas.map((area) => (
+            {[...industrialAreas, 'Others'].map((area) => (
               <Pill
                 key={area}
                 label={area}
@@ -117,13 +120,22 @@ export default function SignupScreen() {
               />
             ))}
           </ScrollView>
+          {selectedArea === 'Others' ? (
+            <TextInput
+              style={styles.customInput}
+              placeholder="Type your industrial area..."
+              placeholderTextColor="#94a3b8"
+              value={customArea}
+              onChangeText={setCustomArea}
+            />
+          ) : null}
         </View>
 
         {type === 'worker' ? (
           <View>
             <Text style={styles.label}>{t('auth.primaryRole')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-              {allRoles.slice(0, 20).map((role) => (
+              {[...allRoles.slice(0, 20), 'Others'].map((role) => (
                 <Pill
                   key={role}
                   label={role}
@@ -132,6 +144,15 @@ export default function SignupScreen() {
                 />
               ))}
             </ScrollView>
+            {selectedRole === 'Others' ? (
+              <TextInput
+                style={styles.customInput}
+                placeholder="Type your role or job title..."
+                placeholderTextColor="#94a3b8"
+                value={customRole}
+                onChangeText={setCustomRole}
+              />
+            ) : null}
           </View>
         ) : null}
 
@@ -157,6 +178,17 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   label: { color: colors.text, fontWeight: '700', marginBottom: 8 },
   chips: { gap: 8 },
+  customInput: {
+    marginTop: 10,
+    backgroundColor: '#f8fafc',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: colors.text,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
   actions: { flexDirection: 'row', gap: 10 },
   backButton: {
     flex: 1,

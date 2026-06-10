@@ -1,14 +1,14 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Worker } from '../../types';
 import { colors } from '../../constants/colors';
 
-export function WorkerCard({ worker, matchScore }: { worker: Worker; matchScore?: number }) {
+export function WorkerCard({ worker, matchScore, onPress }: { worker: Worker; matchScore?: number; onPress?: () => void }) {
   const initial = (worker.name || 'W').charAt(0).toUpperCase();
 
   return (
-    <View style={styles.card}>
+    <Pressable style={styles.card} onPress={onPress}>
       {/* Header */}
       <View style={styles.top}>
         <View style={styles.avatar}>
@@ -69,7 +69,7 @@ export function WorkerCard({ worker, matchScore }: { worker: Worker; matchScore?
           ) : null}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

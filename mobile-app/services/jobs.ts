@@ -44,6 +44,28 @@ export async function createJob(
   return mapJob(response);
 }
 
+export async function updateJob(
+  token: string,
+  jobId: string,
+  payload: {
+    title?: string;
+    description?: string;
+    area?: string;
+    shift?: string;
+    skillsRequired?: string[];
+    payMin?: number;
+    payMax?: number;
+    employmentType?: string;
+  }
+) {
+  const response = await apiRequest<any>(`/api/jobs/${jobId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  });
+  return mapJob(response);
+}
+
 export async function applyToJob(token: string, jobId: string, note?: string) {
   return apiRequest(`/api/jobs/${jobId}/apply`, {
     method: 'POST',

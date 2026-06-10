@@ -57,7 +57,7 @@ export default function WorkerApplicationsScreen() {
       </View>
 
       <SectionCard title="Your applications" subtitle={`Track applied, shortlisted, and hired updates • ${items.length} item${items.length === 1 ? '' : 's'}`}>
-        <Text style={styles.helperText}>This screen is connected to the worker application history API.</Text>
+        {null}
       </SectionCard>
 
       {loading ? <EmptyState title="Loading applications" message="Fetching your application history from the backend." /> : null}
@@ -90,5 +90,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.panel,
   },
   iconSpacer: { width: 42, height: 42 },
-  helperText: { color: colors.textSoft, lineHeight: 20 },
 });

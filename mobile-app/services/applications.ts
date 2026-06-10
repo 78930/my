@@ -28,3 +28,12 @@ export async function hireApplication(token: string, applicationId: string, payl
     body: payload,
   });
 }
+
+export async function shortlistWorkerForJob(token: string, jobId: string, workerProfileId: string) {
+  const response = await apiRequest<any>(`/api/jobs/${jobId}/shortlist-worker`, {
+    method: 'POST',
+    token,
+    body: { workerProfileId },
+  });
+  return mapJobApplication(response);
+}

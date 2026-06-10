@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text } from 'react-native';
+import { router } from 'expo-router';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
 import { InputField } from '../../components/ui/InputField';
@@ -11,11 +12,15 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { colors } from '../../constants/colors';
 import { searchWorkers } from '../../services/workers';
 import { ApiError } from '../../lib/api';
+import { workerCache } from '../../lib/workerCache';
 import { Worker } from '../../types';
+
+const SHIFTS = ['Any', 'Day', 'Night', 'Rotational'];
 
 export default function TalentTab() {
   const [area, setArea] = useState('Jeedimetla');
   const [role, setRole] = useState('Production Supervisor');
+  const [shift, setShift] = useState('Any');
   const [search, setSearch] = useState('');
   const [items, setItems] = useState<Worker[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,8 +33,16 @@ export default function TalentTab() {
       setLoading(true);
       setError('');
       try {
-        const data = await searchWorkers({ area, role, q: search || undefined });
-        if (!cancelled) setItems(data);
+        const data = await searchWorkers({
+          area,
+          role,
+          shift: shift === 'Any' ? undefined : shift,
+          q: search || undefined,
+        });
+        if (!cancelled) {
+          workerCache.setAll(data);
+          setItems(data);
+        }
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof ApiError ? err.message : 'Unable to load worker profiles';
@@ -44,7 +57,7 @@ export default function TalentTab() {
     return () => {
       cancelled = true;
     };
-  }, [area, role, search]);
+  }, [area, role, shift, search]);
 
   return (
     <Screen>
@@ -69,6 +82,13 @@ export default function TalentTab() {
             <Pill key={item} label={item} active={role === item} onPress={() => setRole(item)} />
           ))}
         </ScrollView>
+
+        <Text style={styles.label}>Shift</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
+          {SHIFTS.map((item) => (
+            <Pill key={item} label={item} active={shift === item} onPress={() => setShift(item)} />
+          ))}
+        </ScrollView>
       </SectionCard>
 
       {loading ? <EmptyState icon="hourglass-outline" title="Loading workers" message="Fetching live worker profiles…" /> : null}
@@ -76,7 +96,15 @@ export default function TalentTab() {
       {!loading && !error && !items.length ? (
         <EmptyState icon="people-outline" title="No profiles found" message="Try another area, role or search term." />
       ) : null}
-      {!loading && !error ? items.map((worker) => <WorkerCard key={worker.id} worker={worker} />) : null}
+      {!loading && !error
+        ? items.map((worker) => (
+            <WorkerCard
+              key={worker.id}
+              worker={worker}
+              onPress={() => router.push(`/worker/${worker.id}` as never)}
+            />
+          ))
+        : null}
     </Screen>
   );
 }
