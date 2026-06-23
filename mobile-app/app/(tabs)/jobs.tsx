@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
@@ -17,14 +17,24 @@ import { applyToJob, listJobs } from '../../services/jobs';
 import { ApiError } from '../../lib/api';
 import { isJobSaved, toggleSavedJob } from '../../services/savedJobs';
 
+type QueryState = { area: string; role: string; search: string; page: number };
+
 export default function JobsTab() {
   const { token, isWorker, profile } = useAuth();
   const workerProfile = isWorker ? (profile as WorkerProfile | null) : null;
-  const [area, setArea] = useState(() => workerProfile?.preferredAreas?.[0] || 'Jeedimetla');
-  const [role, setRole] = useState(() => workerProfile?.preferredRoles?.[0] || 'Production Supervisor');
-  const [search, setSearch] = useState('');
+
+  const [queryState, setQueryState] = useState<QueryState>(() => ({
+    area: workerProfile?.preferredAreas?.[0] || 'Jeedimetla',
+    role: workerProfile?.preferredRoles?.[0] || 'Production Supervisor',
+    search: '',
+    page: 1,
+  }));
+  const { area, role, search, page } = queryState;
+
   const [items, setItems] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState('');
   const [applyingId, setApplyingId] = useState('');
   const [notice, setNotice] = useState('');
@@ -33,31 +43,42 @@ export default function JobsTab() {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    if (page === 1) {
       setLoading(true);
       setError('');
+    } else {
+      setLoadingMore(true);
+    }
+
+    async function load() {
       try {
-        const data = await listJobs({ area, role, q: search || undefined });
-        const entries = await Promise.all(data.map(async (job) => [job.id, await isJobSaved(job.id)] as const));
+        const { items: newItems, pagination } = await listJobs({ area, role, q: search || undefined, page });
+        const entries = await Promise.all(newItems.map(async (job) => [job.id, await isJobSaved(job.id)] as const));
         if (!cancelled) {
-          setItems(data);
-          setSavedMap(Object.fromEntries(entries));
+          if (page === 1) {
+            setItems(newItems);
+            setSavedMap(Object.fromEntries(entries));
+          } else {
+            setItems((prev) => [...prev, ...newItems]);
+            setSavedMap((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+          }
+          setHasMore(pagination?.hasMore ?? false);
         }
       } catch (err) {
         if (!cancelled) {
-          const message = err instanceof ApiError ? err.message : 'Unable to load jobs';
-          setError(message);
+          setError(err instanceof ApiError ? err.message : 'Unable to load jobs');
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingMore(false);
+        }
       }
     }
 
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, [area, role, search]);
+    return () => { cancelled = true; };
+  }, [queryState]);
 
   const subtitle = useMemo(() => `${items.length} result${items.length === 1 ? '' : 's'}`, [items.length]);
 
@@ -66,15 +87,13 @@ export default function JobsTab() {
       setNotice('Log in as a worker to apply for jobs.');
       return;
     }
-
     setNotice('');
     setApplyingId(jobId);
     try {
       await applyToJob(token, jobId);
       setNotice('Application submitted successfully.');
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Unable to apply right now';
-      setNotice(message);
+      setNotice(err instanceof ApiError ? err.message : 'Unable to apply right now');
     } finally {
       setApplyingId('');
     }
@@ -93,20 +112,20 @@ export default function JobsTab() {
           icon="search-outline"
           placeholder="Search jobs, skills, company..."
           value={search}
-          onChangeText={setSearch}
+          onChangeText={(val) => setQueryState((q) => ({ ...q, search: val, page: 1 }))}
         />
 
         <Text style={styles.label}>Industrial area</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-  {industrialAreas.map((item) => (
-    <Pill key={item} label={item} active={area === item} onPress={() => setArea(item)} />
-  ))}
-</ScrollView>
+          {industrialAreas.map((item) => (
+            <Pill key={item} label={item} active={area === item} onPress={() => setQueryState((q) => ({ ...q, area: item, page: 1 }))} />
+          ))}
+        </ScrollView>
 
         <Text style={styles.label}>Popular roles</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
           {mostDemandingRoles.map((item) => (
-            <Pill key={item} label={item} active={role === item} onPress={() => setRole(item)} />
+            <Pill key={item} label={item} active={role === item} onPress={() => setQueryState((q) => ({ ...q, role: item, page: 1 }))} />
           ))}
         </ScrollView>
 
@@ -134,6 +153,21 @@ export default function JobsTab() {
             />
           ))
         : null}
+
+      {!loading && !error && hasMore && !loadingMore ? (
+        <Pressable
+          style={styles.loadMoreBtn}
+          onPress={() => setQueryState((q) => ({ ...q, page: q.page + 1 }))}
+        >
+          <Text style={styles.loadMoreText}>Load more jobs</Text>
+        </Pressable>
+      ) : null}
+      {loadingMore ? (
+        <View style={styles.loadingMoreRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={styles.loadingMoreText}>Loading more…</Text>
+        </View>
+      ) : null}
     </Screen>
   );
 }
@@ -141,4 +175,20 @@ export default function JobsTab() {
 const styles = StyleSheet.create({
   label: { color: colors.text, fontWeight: '700', fontSize: 13 },
   row: { gap: 8 },
+  loadMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  loadMoreText: { color: colors.primary, fontWeight: '800', fontSize: 15 },
+  loadingMoreRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, paddingVertical: 16, marginBottom: 8,
+  },
+  loadingMoreText: { color: colors.textMuted, fontSize: 14 },
 });

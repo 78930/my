@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
 import { JobApplication } from '../../types';
@@ -23,9 +23,11 @@ const STATUS_CONFIG: Record<StatusKey, { label: string; bg: string; text: string
 export function ApplicationHistoryCard({
   item,
   onOpenJob,
+  onViewOffer,
 }: {
   item: JobApplication;
   onOpenJob?: () => void;
+  onViewOffer?: () => void;
 }) {
   const status = item.status as StatusKey;
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.APPLIED;
@@ -58,6 +60,12 @@ export function ApplicationHistoryCard({
           <Ionicons name="time-outline" size={11} color="#64748b" />
           <Text style={styles.metaText}>{item.job?.shift || 'Shift TBD'}</Text>
         </View>
+        {item.proposedPay != null ? (
+          <View style={styles.metaChipGreen}>
+            <Ionicons name="cash-outline" size={11} color="#15803d" />
+            <Text style={styles.metaTextGreen}>₹{item.proposedPay.toLocaleString('en-IN')}</Text>
+          </View>
+        ) : null}
         <View style={styles.metaChip}>
           <Ionicons name="calendar-outline" size={11} color="#64748b" />
           <Text style={styles.metaText}>{formatDate(item.updatedAt || item.createdAt)}</Text>
@@ -72,11 +80,34 @@ export function ApplicationHistoryCard({
         </View>
       ) : null}
 
-      {/* Action */}
-      {onOpenJob && item.jobId ? (
-        <Pressable style={styles.button} onPress={onOpenJob}>
-          <Ionicons name="open-outline" size={14} color={colors.textInverse} />
-          <Text style={styles.buttonText}>View job</Text>
+      {/* Actions */}
+      <View style={styles.actionRow}>
+        {onOpenJob && item.jobId ? (
+          <Pressable style={styles.button} onPress={onOpenJob}>
+            <Ionicons name="open-outline" size={14} color={colors.textInverse} />
+            <Text style={styles.buttonText}>View job</Text>
+          </Pressable>
+        ) : null}
+        {item.status === 'HIRED' && onViewOffer ? (
+          <Pressable style={styles.offerButton} onPress={onViewOffer}>
+            <Ionicons name="checkmark-circle-outline" size={14} color="#15803d" />
+            <Text style={styles.offerButtonText}>View offer</Text>
+          </Pressable>
+        ) : null}
+      </View>
+
+      {/* Factory HR phone — shown after worker applies */}
+      {item.factoryPhone ? (
+        <Pressable
+          style={styles.hrPhone}
+          onPress={() => Linking.openURL(`tel:${item.factoryPhone}`)}
+        >
+          <Ionicons name="call-outline" size={15} color="#15803d" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.hrPhoneLabel}>Factory HR contact</Text>
+            <Text style={styles.hrPhoneNumber}>{item.factoryPhone}</Text>
+          </View>
+          <Text style={styles.hrPhoneTap}>Tap to call</Text>
         </Pressable>
       ) : null}
     </View>
@@ -119,6 +150,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   metaText: { color: '#475569', fontSize: 12, fontWeight: '600' },
+  metaChipGreen: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#f0fdf4',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  metaTextGreen: { color: '#15803d', fontSize: 12, fontWeight: '700' },
   noteBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -129,6 +172,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   noteText: { color: '#1d4ed8', lineHeight: 18, flex: 1, fontSize: 12 },
+  actionRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -141,4 +185,26 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   buttonText: { color: colors.textInverse, fontWeight: '700', fontSize: 13 },
+  offerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: '#f0fdf4',
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+  },
+  offerButtonText: { color: '#15803d', fontWeight: '700', fontSize: 13 },
+  hrPhone: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#f0fdf4', borderRadius: 14, padding: 12,
+    borderWidth: 1, borderColor: '#bbf7d0',
+  },
+  hrPhoneLabel: { color: '#15803d', fontSize: 11, fontWeight: '600', marginBottom: 1 },
+  hrPhoneNumber: { color: '#14532d', fontWeight: '800', fontSize: 16 },
+  hrPhoneTap: { color: '#16a34a', fontSize: 11, fontWeight: '600' },
 });

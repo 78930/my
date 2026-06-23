@@ -9,14 +9,8 @@ import { signAccessToken } from "../utils/jwt.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { env } from "../config/env.js";
 import { sendOtpSms } from "../services/sms.js";
-import { sendOtp, verifyOtp } from "../controllers/otp.controller.js";
 
 const router = Router();
-
-
-router.post("/send-otp", sendOtp);
-router.post("/verify-otp", verifyOtp);
-
 
 const phoneSchema = z
   .string()
@@ -43,13 +37,16 @@ const loginSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
   phone: phoneSchema,
 });
+
 const requestOtpSchema = z.object({
   phone: z.string().min(10),
 });
+
 const verifyOtpSchema = z.object({
   phone: z.string().min(10),
   otp: z.string().length(6),
 });
+
 const otpStore = new Map<string, { code: string; expiresAt: number; attempts: number }>();
 
 function normalizePhone(phone: string) {
@@ -220,13 +217,13 @@ router.post(
     return res.json({
       message: "OTP sent successfully",
       expiresInSeconds: 300,
-      ...(process.env.nodeEnv !== "production" ? { otpCode: code } : {}),
+      ...(env.nodeEnv !== "production" ? { otpCode: code } : {}),
     });
   })
 );
 
 router.post(
-  "/verify-otp",
+  "/verify-login-otp",
   asyncHandler(async (req, res) => {
     const input = verifyOtpSchema.parse(req.body);
     const phone = normalizePhone(input.phone);

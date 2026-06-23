@@ -29,6 +29,14 @@ export async function hireApplication(token: string, applicationId: string, payl
   });
 }
 
+export async function rejectApplication(token: string, applicationId: string) {
+  const response = await apiRequest<any>(`/api/applications/${applicationId}/reject`, {
+    method: 'POST',
+    token,
+  });
+  return mapJobApplication(response);
+}
+
 export async function shortlistWorkerForJob(token: string, jobId: string, workerProfileId: string) {
   const response = await apiRequest<any>(`/api/jobs/${jobId}/shortlist-worker`, {
     method: 'POST',

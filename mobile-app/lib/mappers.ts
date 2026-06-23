@@ -136,5 +136,10 @@ export function mapJobApplication(item: any): JobApplication {
     updatedAt: item?.updatedAt || '',
     worker: mapWorker(item?.workerProfile || {}),
     job: item?.job && typeof item.job === 'object' ? mapJob(item.job) : undefined,
+    proposedPay: item?.hire?.proposedPay != null ? Number(item.hire.proposedPay) : undefined,
+    joiningDate: item?.hire?.joiningDate ? String(item.hire.joiningDate) : undefined,
+    hireStatus: item?.hire?.status || undefined,
+    workerPhone: item?.workerPhone ? String(item.workerPhone) : undefined,
+    factoryPhone: item?.factoryPhone ? String(item.factoryPhone) : undefined,
   };
 }

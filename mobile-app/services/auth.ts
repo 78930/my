@@ -49,7 +49,7 @@ export async function requestLoginOtp(payload: { phone: string }): Promise<OtpRe
 
 export async function loginWithOtp(payload: { phone: string; otp: string }): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
-    '/api/auth/verify-otp',
+    '/api/auth/verify-login-otp',
     {
       method: 'POST',
       body: payload,

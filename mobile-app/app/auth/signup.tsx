@@ -13,6 +13,7 @@ import { allRoles } from '../../constants/roles';
 import { UserType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
+import { updateFactoryProfile } from '../../services/factory';
 
 export default function SignupScreen() {
   const { t } = useTranslation();
@@ -45,10 +46,19 @@ export default function SignupScreen() {
     if (type === 'worker' && selectedRole === 'Others' && !customRole.trim()) { setError('Please enter your primary role.'); return; }
     try {
       if (type === 'factory') {
-        await signUpFactory({
+        const factoryToken = await signUpFactory({
           name: companyName.trim() || hrName.trim(),
           phone,
         });
+        try {
+          await updateFactoryProfile(factoryToken, {
+            companyName: companyName.trim(),
+            hrName: hrName.trim(),
+            description: description.trim() || undefined,
+          });
+        } catch {
+          console.warn('Could not update factory profile after signup');
+        }
       } else {
         await signUpWorker({
           name: fullName.trim(),
@@ -166,7 +176,7 @@ export default function SignupScreen() {
           <Pressable style={styles.backButton} onPress={() => router.back()}>
             <Text style={styles.backText}>{t('common.back')}</Text>
           </Pressable>
-          <Pressable style={styles.primaryButton} onPress={handleSignup} disabled={isSubmitting}>
+          <Pressable style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]} onPress={handleSignup} disabled={isSubmitting}>
             <Text style={styles.primaryText}>{isSubmitting ? t('auth.creating') : t('auth.createAccount')}</Text>
           </Pressable>
         </View>
@@ -205,6 +215,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
+  buttonDisabled: { opacity: 0.55 },
   primaryText: { color: colors.textInverse, fontWeight: '800' },
   errorBox: {
     backgroundColor: '#fef2f2',

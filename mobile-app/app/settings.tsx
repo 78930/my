@@ -73,10 +73,10 @@ export default function SettingsScreen() {
           </View>
         </View>
         <View style={styles.aboutRow}>
-          <Ionicons name="server-outline" size={20} color={colors.textMuted} />
+          <Ionicons name="code-slash-outline" size={20} color={colors.textMuted} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.aboutLabel}>Backend</Text>
-            <Text style={styles.aboutValue}>my-1-1iz4.onrender.com</Text>
+            <Text style={styles.aboutLabel}>Version</Text>
+            <Text style={styles.aboutValue}>1.0.0</Text>
           </View>
         </View>
       </SectionCard>

@@ -181,13 +181,25 @@ export default function PipelineScreen() {
       ) : null}
       {!loadingJobs && !error && !loadingApplications
         ? applications.map((item) => (
-            <ApplicationCard
-              key={item.id}
-              item={item}
-              busy={busyApplicationId === item.id}
-              onShortlist={handleShortlist}
-              onHire={handleHire}
-            />
+            <View key={item.id}>
+              <ApplicationCard
+                item={item}
+                busy={busyApplicationId === item.id}
+                onShortlist={handleShortlist}
+                onHire={handleHire}
+              />
+              <Pressable
+                style={styles.viewDetailsBtn}
+                onPress={() =>
+                  router.push(
+                    `/factory/application/${item.id}?jobId=${selectedJobId}` as never
+                  )
+                }
+              >
+                <Ionicons name="expand-outline" size={13} color={colors.primary} />
+                <Text style={styles.viewDetailsBtnText}>View full profile & reject</Text>
+              </Pressable>
+            </View>
           ))
         : null}
     </Screen>
@@ -216,6 +228,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   refreshText: { color: colors.primary, fontWeight: '800' },
+  viewDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: -4,
+    marginBottom: 4,
+    paddingVertical: 8,
+    backgroundColor: colors.primarySoft,
+    borderRadius: 14,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  viewDetailsBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
   label: { color: colors.text, fontWeight: '700' },
   row: { gap: 8 },
   jobSummary: {

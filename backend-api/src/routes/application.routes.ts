@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import { z } from "zod";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
@@ -68,6 +69,35 @@ router.post(
     );
 
     return res.json(hire);
+  })
+);
+
+router.post(
+  "/:id/reject",
+  requireAuth,
+  requireRole("FACTORY"),
+  asyncHandler<AuthRequest>(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid application id" });
+    }
+
+    const application = await ApplicationModel.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    const job = await JobModel.findOne({ _id: application.job, factoryUser: req.user!.id });
+    if (!job) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    if (application.status === "HIRED") {
+      return res.status(409).json({ message: "Cannot reject an already hired application" });
+    }
+
+    application.status = "REJECTED";
+    await application.save();
+    return res.json(application);
   })
 );
 

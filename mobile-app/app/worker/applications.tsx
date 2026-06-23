@@ -71,6 +71,7 @@ export default function WorkerApplicationsScreen() {
               key={item.id}
               item={item}
               onOpenJob={item.jobId ? () => router.push(`/jobs/${item.jobId}` as never) : undefined}
+              onViewOffer={item.status === 'HIRED' ? () => router.push(`/worker/hire/${item.id}` as never) : undefined}
             />
           ))
         : null}

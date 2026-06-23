@@ -91,7 +91,7 @@ export default function LoginScreen() {
           </Pressable>
 
           <Pressable
-            style={styles.primaryButton}
+            style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={isSubmitting}
           >
@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingVertical: 14,
     alignItems: 'center',
-    opacity: 1,
   },
+  buttonDisabled: { opacity: 0.55 },
   primaryText: { color: colors.textInverse, fontWeight: '800' },
   errorBox: {
     backgroundColor: '#fef2f2',

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -9,17 +9,35 @@ import { workerCache } from '../../lib/workerCache';
 import { useAuth } from '../../context/AuthContext';
 import { listFactoryJobs } from '../../services/factory';
 import { shortlistWorkerForJob } from '../../services/applications';
-import { Job } from '../../types';
+import { getWorkerById } from '../../services/workers';
+import { Job, Worker } from '../../types';
 
 export default function WorkerDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token, isFactory } = useAuth();
-  const worker = workerCache.get(id ?? '');
+
+  const cached = workerCache.get(id ?? '');
+  const [worker, setWorker] = useState<Worker | null>(cached);
+  const [loadingWorker, setLoadingWorker] = useState(cached === null);
+  const [workerError, setWorkerError] = useState('');
 
   const [shortlisting, setShortlisting] = useState(false);
   const [shortlisted, setShortlisted] = useState(false);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [showJobPicker, setShowJobPicker] = useState(false);
+
+  // Fetch from API when not in cache
+  useEffect(() => {
+    if (worker || !id) return;
+    setLoadingWorker(true);
+    getWorkerById(id)
+      .then((w) => {
+        workerCache.set(w);
+        setWorker(w);
+      })
+      .catch(() => setWorkerError('Could not load worker profile. Please go back and try again.'))
+      .finally(() => setLoadingWorker(false));
+  }, [id]);
 
   async function openJobPicker() {
     if (!token) return;
@@ -47,7 +65,25 @@ export default function WorkerDetailScreen() {
     }
   }
 
-  if (!worker) {
+  if (loadingWorker) {
+    return (
+      <Screen>
+        <View style={styles.topBar}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={20} color={colors.textInverse} />
+          </Pressable>
+          <Text style={styles.topTitle}>Worker profile</Text>
+          <View style={styles.spacer} />
+        </View>
+        <View style={styles.notFound}>
+          <Ionicons name="hourglass-outline" size={40} color={colors.textMuted} />
+          <Text style={styles.notFoundText}>Loading profile…</Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (workerError || !worker) {
     return (
       <Screen>
         <View style={styles.topBar}>
@@ -59,7 +95,7 @@ export default function WorkerDetailScreen() {
         </View>
         <View style={styles.notFound}>
           <Ionicons name="person-outline" size={48} color={colors.textMuted} />
-          <Text style={styles.notFoundText}>Profile not found. Go back and tap a worker from search.</Text>
+          <Text style={styles.notFoundText}>{workerError || 'Profile not found. Go back and tap a worker from search.'}</Text>
           <Pressable style={styles.backLink} onPress={() => router.back()}>
             <Text style={styles.backLinkText}>Go back</Text>
           </Pressable>

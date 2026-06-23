@@ -7,14 +7,15 @@ export async function listJobs(params: {
   skill?: string;
   shift?: string;
   q?: string;
+  page?: number;
 }) {
   const search = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
-    if (value) search.set(key, value);
+    if (value !== undefined && value !== '') search.set(key, String(value));
   });
 
-  const response = await apiRequest<{ items: any[] }>(`/api/jobs?${search.toString()}`);
-  return response.items.map(mapJob);
+  const response = await apiRequest<{ items: any[]; pagination?: { page: number; limit: number; total: number; totalPages: number; hasMore: boolean } }>(`/api/jobs?${search.toString()}`);
+  return { items: response.items.map(mapJob), pagination: response.pagination };
 }
 
 export async function getJobDetails(jobId: string) {

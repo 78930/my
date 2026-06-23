@@ -12,10 +12,16 @@ import { SavedJob } from '../../types';
 
 export default function SavedJobsScreen() {
   const [items, setItems] = useState<SavedJob[]>([]);
+  const [loading, setLoading] = useState(true);
 
   async function load() {
-    const data = await listSavedJobs();
-    setItems(data);
+    setLoading(true);
+    try {
+      const data = await listSavedJobs();
+      setItems(data);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -24,7 +30,7 @@ export default function SavedJobsScreen() {
 
   async function handleUnsave(jobId: string) {
     await unsaveJob(jobId);
-    await load();
+    setItems((prev) => prev.filter((item) => item.jobId !== jobId));
   }
 
   return (
@@ -37,12 +43,21 @@ export default function SavedJobsScreen() {
         <View style={styles.iconSpacer} />
       </View>
 
-      <SectionCard title="Saved for later" subtitle={`${items.length} saved job${items.length === 1 ? '' : 's'} on this device`}>
-        <Text style={styles.helperText}>Saved jobs are stored locally so workers can revisit openings quickly.</Text>
+      <SectionCard
+        title="Saved for later"
+        subtitle={loading ? 'Loading…' : `${items.length} saved job${items.length === 1 ? '' : 's'} on this device`}
+      >
+        <Text style={styles.helperText}>Saved jobs are stored locally so you can revisit openings quickly.</Text>
       </SectionCard>
 
-      {!items.length ? (
-        <EmptyState title="No saved jobs" message="Save a job from the Jobs list or Job details screen." />
+      {loading ? (
+        <EmptyState icon="hourglass-outline" title="Loading" message="Fetching your saved jobs…" />
+      ) : items.length === 0 ? (
+        <EmptyState
+          title="No saved jobs"
+          message="Save a job from the Jobs list or Job details screen to see it here."
+          icon="bookmark-outline"
+        />
       ) : (
         items.map((item) => (
           <JobCard

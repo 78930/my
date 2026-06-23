@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -13,7 +13,7 @@ import { Screen } from '../../components/ui/Screen';
 import { SectionCard } from '../../components/ui/SectionCard';
 import { colors } from '../../constants/colors';
 import { useAuth } from '../../context/AuthContext';
-import { updateWorkerProfile } from '../../services/workers';
+import { getWorkerProfile, updateWorkerProfile } from '../../services/workers';
 import { ApiError } from '../../lib/api';
 
 type Section = 'choose' | 'form' | 'upload';
@@ -30,7 +30,20 @@ export default function ResumeTab() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pdfFile, setPdfFile] = useState<{ name: string; uri: string; size?: number } | null>(null);
-  const [pdfUploaded, setPdfUploaded] = useState(false);
+
+  // Pre-fill form with existing worker profile data
+  useEffect(() => {
+    if (!token) return;
+    getWorkerProfile(token).then((p) => {
+      if (p.fullName) setFullName(p.fullName);
+      if (p.skills?.length) setSkills(p.skills.join(', '));
+      if (p.experienceYears) setExperience(`${p.experienceYears} years`);
+      if (p.preferredAreas?.length) setAddress(p.preferredAreas[0]);
+      if (p.certifications?.length) setEducation(p.certifications.join(', '));
+    }).catch(() => {
+      // silently ignore — form just stays empty
+    });
+  }, [token]);
 
   async function pickPdf() {
     try {
@@ -41,17 +54,9 @@ export default function ResumeTab() {
       if (result.canceled) return;
       const asset = result.assets[0];
       setPdfFile({ name: asset.name, uri: asset.uri, size: asset.size });
-      setPdfUploaded(false);
     } catch {
       Alert.alert('Error', 'Could not open document picker. Please try again.');
     }
-  }
-
-  function handleUploadPdf() {
-    if (!pdfFile) { pickPdf(); return; }
-    // TODO: send pdfFile.uri to backend via multipart upload
-    setPdfUploaded(true);
-    Alert.alert('Resume uploaded', `"${pdfFile.name}" has been uploaded. Factories can now view your resume.`);
   }
 
   async function handleSave() {
@@ -67,14 +72,10 @@ export default function ResumeTab() {
     setSaving(true);
     try {
       const skillsArray = skills.split(',').map((s) => s.trim()).filter(Boolean);
-      // Extract year count from experience text (e.g. "2 years" → 2)
       const yearMatch = experience.match(/(\d+)\s*(?:year|yr)/i);
       const expYears = yearMatch ? Number(yearMatch[1]) : 0;
-      // Build headline from first 100 chars of experience or education
       const headline = (experience || education || '').slice(0, 100).trim();
-      // Treat education entries as certifications
       const certifications = education.split(',').map((e) => e.trim()).filter(Boolean);
-      // Treat address as a preferred area
       const preferredAreas = address.trim() ? [address.trim()] : undefined;
 
       await updateWorkerProfile(token, {
@@ -195,20 +196,20 @@ export default function ResumeTab() {
           </Pressable>
         </SectionCard>
 
-        {pdfUploaded ? (
-          <View style={styles.successBox}>
-            <Ionicons name="checkmark-circle" size={20} color="#16a34a" />
-            <Text style={styles.successText}>Resume uploaded successfully!</Text>
-          </View>
-        ) : null}
+        {/* Coming-soon notice — backend PDF upload endpoint not yet available */}
+        <View style={styles.comingSoonBox}>
+          <Ionicons name="information-circle-outline" size={18} color="#92400e" />
+          <Text style={styles.comingSoonText}>
+            PDF upload is coming soon. For now, use "Fill in my details" to build your profile.
+          </Text>
+        </View>
 
         <Pressable
-          style={[styles.saveBtn, !pdfFile && styles.saveBtnDisabled]}
-          onPress={handleUploadPdf}
-          disabled={!pdfFile && false}
+          style={[styles.saveBtn, styles.saveBtnDisabled]}
+          onPress={pickPdf}
         >
           <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
-          <Text style={styles.saveBtnText}>{pdfFile ? 'Upload resume' : 'Select a PDF first'}</Text>
+          <Text style={styles.saveBtnText}>{pdfFile ? pdfFile.name : 'Select a PDF first'}</Text>
         </Pressable>
       </Screen>
     );
@@ -336,7 +337,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  optionCardDisabled: { opacity: 0.7 },
   optionIcon: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   optionText: { flex: 1 },
   optionTitle: { color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 3 },
@@ -356,6 +356,18 @@ const styles = StyleSheet.create({
   pdfName: { color: colors.text, fontWeight: '800', fontSize: 15, textAlign: 'center', paddingHorizontal: 16 },
   pdfSize: { color: colors.textMuted, fontSize: 12 },
   changeFile: { color: colors.primary, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  comingSoonBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#fffbeb',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  comingSoonText: { flex: 1, color: '#92400e', fontSize: 13, lineHeight: 18 },
   saveBtnDisabled: { backgroundColor: colors.textMuted },
   benefitRow: {
     flexDirection: 'row',

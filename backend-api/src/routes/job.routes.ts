@@ -7,6 +7,7 @@ import FactoryProfileModel from "../models/FactoryProfile.js";
 import JobModel from "../models/Job.js";
 import WorkerProfileModel from "../models/WorkerProfile.js";
 import ApplicationModel from "../models/Application.js";
+import UserModel from "../models/User.js";
 
 const router = Router();
 
@@ -25,7 +26,10 @@ const createJobSchema = z.object({
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const { area, role, skill, shift, q } = req.query as Record<string, string | undefined>;
+    const { area, role, skill, shift, q, page: pageStr, limit: limitStr } = req.query as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(limitStr ?? "20", 10) || 20));
+    const skip = (page - 1) * limit;
 
     const filter: Record<string, unknown> = { status: "OPEN" };
 
@@ -41,12 +45,20 @@ router.get(
       ];
     }
 
-    const jobs = await JobModel.find(filter)
-      .populate("factoryProfile", "companyName hrName industrialAreas description")
-      .sort({ createdAt: -1 })
-      .limit(100);
+    const [jobs, total] = await Promise.all([
+      JobModel.find(filter)
+        .populate("factoryProfile", "companyName hrName industrialAreas description")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      JobModel.countDocuments(filter),
+    ]);
 
-    return res.json({ items: jobs });
+    const totalPages = Math.ceil(total / limit);
+    return res.json({
+      items: jobs,
+      pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
+    });
   })
 );
 
@@ -227,13 +239,19 @@ router.get(
       .sort({ createdAt: -1 })
       .lean();
 
-    // Attach worker profile to each application
-    const enriched = await Promise.all(
-      applications.map(async (app) => {
-        const workerProfile = await WorkerProfileModel.findOne({ user: app.workerUser }).lean();
-        return { ...app, workerProfile };
-      })
-    );
+    // Bulk-fetch worker profiles and phone numbers to avoid N+1 queries
+    const workerUserIds = applications.map((a) => a.workerUser);
+    const [workerProfiles, workerUsers] = await Promise.all([
+      WorkerProfileModel.find({ user: { $in: workerUserIds } }).lean(),
+      UserModel.find({ _id: { $in: workerUserIds } }, "phone").lean(),
+    ]);
+    const profileMap = new Map(workerProfiles.map((p) => [String(p.user), p]));
+    const phoneMap = new Map(workerUsers.map((u) => [String(u._id), u.phone]));
+    const enriched = applications.map((app) => ({
+      ...app,
+      workerProfile: profileMap.get(String(app.workerUser)) ?? null,
+      workerPhone: phoneMap.get(String(app.workerUser)) ?? null,
+    }));
 
     return res.json({ items: enriched });
   })

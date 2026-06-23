@@ -51,12 +51,17 @@ export default function FactoryTab() {
             {user ? `Welcome, ${user.name}` : 'Factory hiring dashboard'}
           </Text>
         </View>
-        <Pressable
-          style={styles.logoutBtn}
-          onPress={async () => { await signOut(); router.replace('/auth/welcome'); }}
-        >
-          <Ionicons name="log-out-outline" size={18} color={colors.textInverse} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
+            <Ionicons name="notifications-outline" size={20} color={colors.textInverse} />
+          </Pressable>
+          <Pressable
+            style={styles.logoutBtn}
+            onPress={async () => { await signOut(); router.replace('/auth/welcome'); }}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.textInverse} />
+          </Pressable>
+        </View>
       </View>
 
       {/* Stats row */}
@@ -155,6 +160,15 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   brand: { color: colors.textInverse, fontSize: 28, fontWeight: '800' },
   sub: { color: colors.textMuted, marginTop: 4 },
+  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   logoutBtn: {
     width: 44,
     height: 44,

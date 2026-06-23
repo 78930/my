@@ -81,7 +81,7 @@ export type FactoryDashboardSummary = {
   hires: number;
 };
 
-export type JobApplicationStatus = 'APPLIED' | 'SHORTLISTED' | 'INTERVIEW' | 'HIRED' | 'REJECTED';
+export type JobApplicationStatus = 'APPLIED' | 'SHORTLISTED' | 'HIRED' | 'REJECTED';
 
 export type JobApplication = {
   id: string;
@@ -93,6 +93,11 @@ export type JobApplication = {
   createdAt?: string;
   worker: Worker;
   job?: Job;
+  proposedPay?: number;
+  joiningDate?: string;
+  hireStatus?: string;
+  workerPhone?: string;
+  factoryPhone?: string;
 };
 
 export type SavedJob = {

@@ -6,8 +6,8 @@ import { Screen } from '../components/ui/Screen';
 import { SectionCard } from '../components/ui/SectionCard';
 import { colors } from '../constants/colors';
 import { useAuth } from '../context/AuthContext';
-import { listMyApplications } from '../services/applications';
-import { JobApplication } from '../types';
+import { listMyApplications, listJobApplications } from '../services/applications';
+import { listFactoryJobs } from '../services/factory';
 import { clearAllNotifications } from '../lib/notifications';
 
 type NotiItem = {
@@ -18,13 +18,20 @@ type NotiItem = {
   title: string;
   body: string;
   time: string;
+  onPress?: () => void;
 };
 
-const STATUS_CONFIG: Record<string, { icon: React.ComponentProps<typeof Ionicons>['name']; iconColor: string; iconBg: string; title: string; body: (job: string) => string }> = {
-  SHORTLISTED: { icon: 'star', iconColor: '#d97706', iconBg: '#fffbeb', title: 'You were shortlisted!', body: (job) => `Great news — a factory shortlisted you for "${job}". Keep your profile updated.` },
-  HIRED:       { icon: 'checkmark-circle', iconColor: '#16a34a', iconBg: '#f0fdf4', title: 'You got hired!', body: (job) => `Congratulations! You have been hired for "${job}".` },
-  REJECTED:    { icon: 'close-circle', iconColor: '#b91c1c', iconBg: '#fef2f2', title: 'Application update', body: (job) => `Your application for "${job}" was not selected this time. Keep applying!` },
-  APPLIED:     { icon: 'paper-plane', iconColor: colors.primary, iconBg: '#eff6ff', title: 'Application submitted', body: (job) => `Your application for "${job}" has been received.` },
+const WORKER_STATUS_CONFIG: Record<string, {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+  iconBg: string;
+  title: string;
+  body: (job: string) => string;
+}> = {
+  SHORTLISTED: { icon: 'star',            iconColor: '#d97706', iconBg: '#fffbeb', title: 'You were shortlisted!', body: (j) => `Great news — a factory shortlisted you for "${j}". Keep your profile updated.` },
+  HIRED:       { icon: 'checkmark-circle', iconColor: '#16a34a', iconBg: '#f0fdf4', title: 'You got hired!',        body: (j) => `Congratulations! You have been hired for "${j}".` },
+  REJECTED:    { icon: 'close-circle',    iconColor: '#b91c1c', iconBg: '#fef2f2', title: 'Application update',    body: (j) => `Your application for "${j}" was not selected this time. Keep applying!` },
+  APPLIED:     { icon: 'paper-plane',     iconColor: colors.primary, iconBg: '#eff6ff', title: 'Application submitted', body: (j) => `Your application for "${j}" has been received.` },
 };
 
 function formatRelative(dateStr?: string) {
@@ -38,46 +45,88 @@ function formatRelative(dateStr?: string) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function applicationsToNotifications(apps: JobApplication[]): NotiItem[] {
-  return apps
-    .filter((a) => a.status !== 'APPLIED' || true)
-    .map((a) => {
-      const cfg = STATUS_CONFIG[a.status] ?? STATUS_CONFIG.APPLIED;
-      const jobLabel = a.job?.title || a.job?.role || 'a job';
-      return {
-        id: a.id,
-        icon: cfg.icon,
-        iconColor: cfg.iconColor,
-        iconBg: cfg.iconBg,
-        title: cfg.title,
-        body: cfg.body(jobLabel),
-        time: formatRelative(a.updatedAt || a.createdAt),
-      };
-    })
-    .sort((a, b) => 0);
-}
-
 export default function NotificationsScreen() {
-  const { token, isWorker } = useAuth();
+  const { token, isWorker, isFactory } = useAuth();
   const [items, setItems] = useState<NotiItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     clearAllNotifications();
+    let cancelled = false;
 
     async function load() {
-      if (!token || !isWorker) { setLoading(false); return; }
+      if (!token) { setLoading(false); return; }
       try {
-        const apps = await listMyApplications(token);
-        setItems(applicationsToNotifications(apps));
+        if (isWorker) {
+          const apps = await listMyApplications(token);
+          if (!cancelled) {
+            setItems(
+              [...apps]
+                .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())
+                .map((a) => {
+                  const cfg = WORKER_STATUS_CONFIG[a.status] ?? WORKER_STATUS_CONFIG.APPLIED;
+                  const jobLabel = a.job?.title || a.job?.role || 'a job';
+                  const onPress = a.status === 'HIRED'
+                    ? () => router.push(`/worker/hire/${a.id}` as never)
+                    : () => router.push('/worker/applications' as never);
+                  return {
+                    id: a.id,
+                    icon: cfg.icon,
+                    iconColor: cfg.iconColor,
+                    iconBg: cfg.iconBg,
+                    title: cfg.title,
+                    body: cfg.body(jobLabel),
+                    time: formatRelative(a.updatedAt || a.createdAt),
+                    onPress,
+                  };
+                })
+            );
+          }
+        } else if (isFactory) {
+          const jobs = await listFactoryJobs(token);
+          if (!jobs.length) {
+            if (!cancelled) setItems([]);
+            return;
+          }
+          const allAppsArrays = await Promise.all(jobs.map((job) => listJobApplications(token, job.id)));
+          if (cancelled) return;
+          const jobMap = new Map(jobs.map((j) => [j.id, j]));
+          setItems(
+            allAppsArrays
+              .flat()
+              .filter((a) => a.status !== 'REJECTED')
+              .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())
+              .map((app) => {
+                const job = jobMap.get(app.jobId);
+                const workerName = app.worker?.fullName || app.worker?.name || 'A worker';
+                const role = job?.role || 'a role';
+                const onPress = () => router.push(`/factory/application/${app.id}?jobId=${app.jobId}` as never);
+                if (app.status === 'APPLIED') {
+                  return { id: app.id, icon: 'person-add-outline' as const, iconColor: colors.primary, iconBg: '#eff6ff', title: 'New applicant', body: `${workerName} applied for your "${role}" opening.`, time: formatRelative(app.updatedAt || app.createdAt), onPress };
+                }
+                if (app.status === 'SHORTLISTED') {
+                  return { id: app.id, icon: 'star-outline' as const, iconColor: '#d97706', iconBg: '#fffbeb', title: 'Candidate shortlisted', body: `${workerName} is shortlisted for "${role}".`, time: formatRelative(app.updatedAt || app.createdAt), onPress };
+                }
+                return { id: app.id, icon: 'checkmark-circle-outline' as const, iconColor: '#16a34a', iconBg: '#f0fdf4', title: 'Worker hired', body: `You hired ${workerName} for "${role}".`, time: formatRelative(app.updatedAt || app.createdAt), onPress };
+              })
+          );
+        }
       } catch {
-        setItems([]);
+        if (!cancelled) setItems([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
+
     load();
-  }, [token, isWorker]);
+    return () => { cancelled = true; };
+  }, [token, isWorker, isFactory]);
+
+  const emptyBody = isFactory
+    ? 'Post jobs and share them with workers. New applicants will appear here.'
+    : 'Apply to jobs to receive updates when factories shortlist or hire you.';
+  const emptyBrowseTo = isFactory ? '/factory/post-job' : '/(tabs)/jobs';
+  const emptyBrowseLabel = isFactory ? 'Post a job' : 'Browse jobs';
 
   return (
     <Screen>
@@ -95,15 +144,20 @@ export default function NotificationsScreen() {
         <View style={styles.empty}>
           <Ionicons name="notifications-off-outline" size={52} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>No notifications yet</Text>
-          <Text style={styles.emptyBody}>Apply to jobs to receive updates when factories shortlist or hire you.</Text>
-          <Pressable style={styles.browseBtn} onPress={() => router.replace('/(tabs)/jobs')}>
-            <Text style={styles.browseBtnText}>Browse jobs</Text>
+          <Text style={styles.emptyBody}>{emptyBody}</Text>
+          <Pressable style={styles.browseBtn} onPress={() => router.replace(emptyBrowseTo as never)}>
+            <Text style={styles.browseBtnText}>{emptyBrowseLabel}</Text>
           </Pressable>
         </View>
       ) : (
         <SectionCard title={`${items.length} update${items.length === 1 ? '' : 's'}`}>
           {items.map((item) => (
-            <View key={item.id} style={styles.row}>
+            <Pressable
+              key={item.id}
+              style={styles.row}
+              onPress={item.onPress}
+              disabled={!item.onPress}
+            >
               <View style={[styles.iconWrap, { backgroundColor: item.iconBg }]}>
                 <Ionicons name={item.icon} size={22} color={item.iconColor} />
               </View>
@@ -114,7 +168,8 @@ export default function NotificationsScreen() {
                 </View>
                 <Text style={styles.body}>{item.body}</Text>
               </View>
-            </View>
+              {item.onPress ? <Ionicons name="chevron-forward" size={14} color={colors.textMuted} /> : null}
+            </Pressable>
           ))}
         </SectionCard>
       )}
@@ -126,7 +181,11 @@ export default function NotificationsScreen() {
           </View>
           <View style={styles.content}>
             <Text style={styles.title}>Push notifications enabled</Text>
-            <Text style={styles.body}>You will be alerted when factories shortlist or hire you, and when new matching jobs are posted.</Text>
+            <Text style={styles.body}>
+              {isFactory
+                ? 'You will be alerted when new workers apply to your job posts.'
+                : 'You will be alerted when factories shortlist or hire you, and when new matching jobs are posted.'}
+            </Text>
           </View>
         </View>
       </SectionCard>
@@ -150,7 +209,7 @@ const styles = StyleSheet.create({
   browseBtn: { backgroundColor: colors.primary, borderRadius: 14, paddingHorizontal: 24, paddingVertical: 12, marginTop: 4 },
   browseBtnText: { color: '#fff', fontWeight: '800', fontSize: 15 },
   row: {
-    flexDirection: 'row', gap: 12, paddingVertical: 12,
+    flexDirection: 'row', gap: 12, paddingVertical: 12, alignItems: 'center',
     borderBottomWidth: 1, borderBottomColor: '#f1f5f9',
   },
   alertRow: { flexDirection: 'row', gap: 12 },

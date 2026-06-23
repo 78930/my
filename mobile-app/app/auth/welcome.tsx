@@ -21,7 +21,7 @@ export default function WelcomeScreen() {
             <Text style={styles.sub}>{t('auth.welcomeSubtitle')}</Text>
           </View>
           <View style={styles.cityBadge}>
-            <Text style={styles.cityText}></Text>
+            <Text style={styles.cityText}>Hyderabad</Text>
           </View>
         </View>
 
@@ -83,6 +83,15 @@ export default function WelcomeScreen() {
             <Text style={styles.primaryButtonText}>{t('auth.factorySignup')}</Text>
           </Pressable>
         </View>
+
+        {/* OTP login link */}
+        <Pressable
+          style={styles.otpLink}
+          onPress={() => router.push('/auth/otp-login')}
+        >
+          <Ionicons name="key-outline" size={14} color={colors.textSoft} />
+          <Text style={styles.otpLinkText}>Login with OTP instead</Text>
+        </Pressable>
       </View>
 
     </Screen>
@@ -180,4 +189,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: { color: colors.textInverse, fontWeight: '800', fontSize: 14 },
   btnIcon: { marginRight: 2 },
+
+  /* OTP link */
+  otpLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  otpLinkText: { color: colors.textSoft, fontSize: 13, fontWeight: '600' },
 });

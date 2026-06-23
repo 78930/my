@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 import { env } from "./config/env.js";
 import authRoutes from "./routes/auth.routes.js";
 import workerRoutes from "./routes/worker.routes.js";
@@ -23,11 +24,16 @@ app.use(
 );
 app.use(express.json({ limit: "1mb" }));
 
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const otpLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false });
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "sketu-backend", authVersion: 2 });
 });
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth/request-otp", otpLimiter);
+app.use("/api/auth/verify-login-otp", otpLimiter);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/workers", workerRoutes);
 app.use("/api/factories", factoryRoutes);
 app.use("/api/jobs", jobRoutes);
