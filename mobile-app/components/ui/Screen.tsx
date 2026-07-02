@@ -1,11 +1,12 @@
 import React from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import type { RefreshControlProps } from 'react-native';
 import { colors } from '../../constants/colors';
 
 type Props = {
   children: React.ReactNode;
   contentContainerStyle?: ViewStyle;
-  refreshControl?: React.ReactElement;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 };
 
 export function Screen({ children, contentContainerStyle, refreshControl }: Props) {

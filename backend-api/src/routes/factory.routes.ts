@@ -54,15 +54,28 @@ router.get(
   requireAuth,
   requireRole("FACTORY"),
   asyncHandler<AuthRequest>(async (req, res) => {
-    const { status } = req.query as Record<string, string | undefined>;
+    const { status, page: pageStr, limit: limitStr } = req.query as Record<string, string | undefined>;
+    const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitStr ?? "50", 10) || 50));
+    const skip = (page - 1) * limit;
+
     const query: Record<string, unknown> = { factoryUser: req.user!.id };
     if (status) query.status = status;
 
-    const jobs = await JobModel.find(query)
-      .populate("factoryProfile", "companyName hrName industrialAreas")
-      .sort({ createdAt: -1 });
+    const [jobs, total] = await Promise.all([
+      JobModel.find(query)
+        .populate("factoryProfile", "companyName hrName industrialAreas")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      JobModel.countDocuments(query),
+    ]);
 
-    return res.json({ items: jobs });
+    const totalPages = Math.ceil(total / limit);
+    return res.json({
+      items: jobs,
+      pagination: { page, limit, total, totalPages, hasMore: page < totalPages },
+    });
   })
 );
 

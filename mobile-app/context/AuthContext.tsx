@@ -18,7 +18,7 @@ type AuthContextValue = {
   signIn: (payload: { role: UserType; name: string; phone: string }) => Promise<void>;
   requestOtp: (payload: { phone: string }) => Promise<OtpRequestResponse>;
   signInWithOtp: (payload: { phone: string; otp: string }) => Promise<void>;
-  signUpWorker: (payload: { name: string; phone: string }) => Promise<void>;
+  signUpWorker: (payload: { name: string; phone: string }) => Promise<string>;
   signUpFactory: (payload: { name: string; phone: string }) => Promise<string>;
   refreshSession: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -62,12 +62,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(parsed.user);
       setProfile(parsed.profile ?? null);
 
-      const fresh = await getMe(parsed.token);
-      await persistSession({ token: parsed.token, user: fresh.user, profile: fresh.profile });
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 401) {
-        Alert.alert('Session expired', 'Your session has expired. Please log in again.');
+      try {
+        const fresh = await getMe(parsed.token);
+        await persistSession({ token: parsed.token, user: fresh.user, profile: fresh.profile });
+      } catch (err) {
+        // Only evict the session on a confirmed 401 — network errors keep the user logged in
+        if (err instanceof ApiError && err.status === 401) {
+          Alert.alert('Session expired', 'Your session has expired. Please log in again.');
+          await clearSession();
+        }
+        // Any other error (network offline, 5xx) — silently keep the stored session
       }
+    } catch {
+      // JSON parse failure — stored data is corrupt, clear it
       await clearSession();
     } finally {
       setIsLoading(false);
@@ -102,11 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persistSession]);
 
-  const signUpWorker = useCallback(async (payload: { name: string; phone: string }) => {
+  const signUpWorker = useCallback(async (payload: { name: string; phone: string }): Promise<string> => {
     setIsSubmitting(true);
     try {
       const session = await registerWorker(payload);
       await persistSession(session);
+      return session.token;
     } finally {
       setIsSubmitting(false);
     }

@@ -48,7 +48,7 @@ export default function DocumentsTab() {
 
     const result = source === 'camera'
       ? await ImagePicker.launchCameraAsync({ quality: 0.8, allowsEditing: true, aspect: [4, 3] })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.8, allowsEditing: true, aspect: [4, 3], mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      : await ImagePicker.launchImageLibraryAsync({ quality: 0.8, allowsEditing: true, aspect: [4, 3], mediaTypes: ['images'] });
 
     if (result.canceled) return;
 
@@ -135,7 +135,7 @@ export default function DocumentsTab() {
         </View>
         <View style={styles.benefitRow}>
           <Ionicons name="lock-closed-outline" size={20} color="#7c3aed" />
-          <Text style={styles.benefitText}>Your documents are stored securely and encrypted</Text>
+          <Text style={styles.benefitText}>Document upload and verification coming soon</Text>
         </View>
       </SectionCard>
 

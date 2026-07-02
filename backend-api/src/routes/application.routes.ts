@@ -6,6 +6,8 @@ import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.j
 import ApplicationModel from "../models/Application.js";
 import JobModel from "../models/Job.js";
 import HireModel from "../models/Hire.js";
+import WorkerProfileModel from "../models/WorkerProfile.js";
+import UserModel from "../models/User.js";
 
 const router = Router();
 
@@ -14,11 +16,114 @@ const hireSchema = z.object({
   joiningDate: z.string().optional(),
 });
 
+// GET /api/applications/:id — get a single application (factory sees applicant; worker sees own)
+router.get(
+  "/:id",
+  requireAuth,
+  asyncHandler<AuthRequest>(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid application id" });
+    }
+
+    const application = await ApplicationModel.findById(req.params.id).lean();
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    const role = req.user!.role;
+
+    if (role === "WORKER") {
+      if (String(application.workerUser) !== String(req.user!.id)) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
+
+      const [job, hire] = await Promise.all([
+        JobModel.findById(application.job)
+          .populate("factoryProfile", "companyName hrName industrialAreas")
+          .lean(),
+        HireModel.findOne({ application: application._id }).lean(),
+      ]);
+
+      const factoryUser = job ? await UserModel.findById((job as any).factoryUser, "phone").lean() : null;
+
+      return res.json({
+        ...application,
+        job,
+        hire: hire ?? null,
+        factoryPhone: factoryUser?.phone ?? null,
+      });
+    }
+
+    if (role === "FACTORY") {
+      const job = await JobModel.findOne({ _id: application.job, factoryUser: req.user!.id });
+      if (!job) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
+
+      const [workerProfile, workerUser] = await Promise.all([
+        WorkerProfileModel.findOne({ user: application.workerUser }).lean(),
+        UserModel.findById(application.workerUser, "phone").lean(),
+      ]);
+
+      return res.json({
+        ...application,
+        workerProfile: workerProfile ?? null,
+        workerPhone: workerUser?.phone ?? null,
+      });
+    }
+
+    return res.status(403).json({ message: "Not allowed" });
+  })
+);
+
+// PATCH /api/applications/:id/respond — worker accepts or rejects a hire offer
+router.patch(
+  "/:id/respond",
+  requireAuth,
+  requireRole("WORKER"),
+  asyncHandler<AuthRequest>(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid application id" });
+    }
+
+    const { decision } = z.object({
+      decision: z.enum(["ACCEPTED", "REJECTED"]),
+    }).parse(req.body);
+
+    const application = await ApplicationModel.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+    if (String(application.workerUser) !== String(req.user!.id)) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+    if (application.status !== "HIRED") {
+      return res.status(409).json({ message: "Only HIRED applications can be responded to" });
+    }
+
+    const hire = await HireModel.findOne({ application: application._id });
+    if (!hire) {
+      return res.status(404).json({ message: "Hire offer not found" });
+    }
+    if (hire.status !== "OFFERED") {
+      return res.status(409).json({ message: "Offer has already been responded to" });
+    }
+
+    hire.status = decision;
+    await hire.save();
+
+    return res.json(hire);
+  })
+);
+
 router.post(
   "/:id/shortlist",
   requireAuth,
   requireRole("FACTORY"),
   asyncHandler<AuthRequest>(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid application id" });
+    }
     const application = await ApplicationModel.findById(req.params.id);
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
@@ -40,6 +145,9 @@ router.post(
   requireAuth,
   requireRole("FACTORY"),
   asyncHandler<AuthRequest>(async (req, res) => {
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(400).json({ message: "Invalid application id" });
+    }
     const input = hireSchema.parse(req.body);
     const application = await ApplicationModel.findById(req.params.id);
     if (!application) {

@@ -15,6 +15,7 @@ export type Job = {
   skills: string[];
   skillsRequired?: string[];
   description?: string;
+  factoryDescription?: string;
   status?: string;
   employmentType?: string;
 };

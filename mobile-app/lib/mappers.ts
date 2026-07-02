@@ -47,6 +47,7 @@ export function mapJob(item: any): Job {
     skills: Array.isArray(item?.skillsRequired) ? item.skillsRequired : Array.isArray(item?.skills) ? item.skills : [],
     skillsRequired: Array.isArray(item?.skillsRequired) ? item.skillsRequired : Array.isArray(item?.skills) ? item.skills : [],
     description: item?.description || '',
+    factoryDescription: item?.factoryProfile?.description || '',
     status: item?.status || 'OPEN',
     employmentType: item?.employmentType || 'Full-time',
   };

@@ -25,6 +25,11 @@ const updateWorkerProfileSchema = z.object({
   isOpenToWork: z.boolean().optional(),
 });
 
+// Escape special regex characters to prevent ReDoS attacks
+function escapeRegex(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // GET /api/workers/search — public worker search for factories
 router.get(
   "/search",
@@ -36,15 +41,16 @@ router.get(
 
     const filter: Record<string, unknown> = { isOpenToWork: true };
 
-    if (area) filter.preferredAreas = { $in: [new RegExp(area, "i")] };
-    if (shift) filter.preferredShifts = { $in: [new RegExp(shift, "i")] };
-    if (role) filter.preferredRoles = { $in: [new RegExp(role, "i")] };
-    if (skill) filter.skills = { $in: [new RegExp(skill, "i")] };
+    if (area) filter.preferredAreas = { $in: [new RegExp(escapeRegex(area), "i")] };
+    if (shift) filter.preferredShifts = { $in: [new RegExp(escapeRegex(shift), "i")] };
+    if (role) filter.preferredRoles = { $in: [new RegExp(escapeRegex(role), "i")] };
+    if (skill) filter.skills = { $in: [new RegExp(escapeRegex(skill), "i")] };
     if (q) {
+      const safeQ = escapeRegex(q);
       filter.$or = [
-        { fullName: { $regex: q, $options: "i" } },
-        { headline: { $regex: q, $options: "i" } },
-        { skills: { $in: [new RegExp(q, "i")] } },
+        { fullName: { $regex: safeQ, $options: "i" } },
+        { headline: { $regex: safeQ, $options: "i" } },
+        { skills: { $in: [new RegExp(safeQ, "i")] } },
       ];
     }
 

@@ -14,6 +14,7 @@ import { UserType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 import { updateFactoryProfile } from '../../services/factory';
+import { updateWorkerProfile } from '../../services/workers';
 
 export default function SignupScreen() {
   const { t } = useTranslation();
@@ -60,10 +61,22 @@ export default function SignupScreen() {
           console.warn('Could not update factory profile after signup');
         }
       } else {
-        await signUpWorker({
+        const workerToken = await signUpWorker({
           name: fullName.trim(),
           phone,
         });
+        // Persist area + role selected during signup so the profile is immediately useful
+        if (workerToken) {
+          try {
+            await updateWorkerProfile(workerToken, {
+              fullName: fullName.trim(),
+              preferredAreas: finalArea ? [finalArea] : [],
+              preferredRoles: finalRole ? [finalRole] : [],
+            });
+          } catch {
+            // Non-fatal — user can complete profile later
+          }
+        }
       }
       router.replace('/(tabs)');
     } catch (err) {

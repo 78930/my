@@ -20,14 +20,6 @@ function resolveApiBaseUrl() {
 
 export const API_BASE_URL = resolveApiBaseUrl();
 
-export function hasApiBaseUrl() {
-  return Boolean(API_BASE_URL);
-}
-
-export function getApiBaseUrl() {
-  return API_BASE_URL;
-}
-
 export function getApiConfigError() {
   return 'API URL is not configured. Restart Expo after saving .env (npx expo start -c).';
 }

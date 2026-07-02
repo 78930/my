@@ -11,6 +11,10 @@ import { errorHandler, notFound } from "./middleware/error.js";
 
 const app = express();
 
+if (env.nodeEnv === "production" && !env.clientOrigin) {
+  throw new Error("CLIENT_ORIGIN must be set in production to prevent wildcard CORS");
+}
+
 const allowedOrigins =
   env.clientOrigin === "*"
     ? true

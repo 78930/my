@@ -22,6 +22,11 @@ const createJobSchema = z.object({
   employmentType: z.string().default("Full-time"),
 });
 
+// Escape special regex characters to prevent ReDoS attacks
+function escapeRegex(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // GET /api/jobs — public list with filters
 router.get(
   "/",
@@ -33,15 +38,16 @@ router.get(
 
     const filter: Record<string, unknown> = { status: "OPEN" };
 
-    if (area) filter.area = { $regex: area, $options: "i" };
-    if (shift) filter.shift = { $regex: shift, $options: "i" };
-    if (role) filter.title = { $regex: role, $options: "i" };
-    if (skill) filter.skillsRequired = { $in: [new RegExp(skill, "i")] };
+    if (area) filter.area = { $regex: escapeRegex(area), $options: "i" };
+    if (shift) filter.shift = { $regex: escapeRegex(shift), $options: "i" };
+    if (role) filter.title = { $regex: escapeRegex(role), $options: "i" };
+    if (skill) filter.skillsRequired = { $in: [new RegExp(escapeRegex(skill), "i")] };
     if (q) {
+      const safeQ = escapeRegex(q);
       filter.$or = [
-        { title: { $regex: q, $options: "i" } },
-        { description: { $regex: q, $options: "i" } },
-        { area: { $regex: q, $options: "i" } },
+        { title: { $regex: safeQ, $options: "i" } },
+        { description: { $regex: safeQ, $options: "i" } },
+        { area: { $regex: safeQ, $options: "i" } },
       ];
     }
 

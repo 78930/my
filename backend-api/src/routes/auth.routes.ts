@@ -189,17 +189,23 @@ router.post(
   asyncHandler(async (req, res) => {
     const input = requestOtpSchema.parse(req.body);
     const phone = normalizePhone(input.phone);
-    const user = await UserModel.findOne({ phone });
 
+    // Always return 200 regardless of whether the phone is registered (prevents user enumeration)
+    const genericResponse = {
+      message: "If this number is registered, you will receive an OTP shortly.",
+      expiresInSeconds: 300,
+    };
+
+    const user = await UserModel.findOne({ phone });
     if (!user) {
-      return res.status(404).json({ message: "No account found for this phone number" });
+      return res.json(genericResponse);
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000));
     otpStore.set(phone, {
       code,
       attempts: 0,
-      expiresAt: Date.now() + 5 * 60 * 1000,
+      expiresAt: Date.now() + env.otpExpirySeconds * 1000,
     });
 
     try {
@@ -209,14 +215,12 @@ router.post(
       }
     } catch (error) {
       console.error("[OTP] SMS send failed", error);
-      return res.status(502).json({ message: "Unable to send OTP SMS. Please try again." });
+      // Still return 200 — don't leak that the number exists
+      return res.json(genericResponse);
     }
 
-    console.log(`[OTP] ${phone} code generated`);
-
     return res.json({
-      message: "OTP sent successfully",
-      expiresInSeconds: 300,
+      ...genericResponse,
       ...(env.nodeEnv !== "production" ? { otpCode: code } : {}),
     });
   })
@@ -260,7 +264,7 @@ router.get(
   requireAuth,
   asyncHandler<AuthRequest>(async (req, res) => {
     const user = await UserModel.findById(req.user!.id).select(
-      "email phone role isActive createdAt"
+      "email phone role name createdAt"
     );
 
     if (!user) {
