@@ -1,29 +1,90 @@
 import React, { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Screen } from '../../../components/ui/Screen';
-import { SectionCard } from '../../../components/ui/SectionCard';
-import { EmptyState } from '../../../components/ui/EmptyState';
-import { Notice } from '../../../components/ui/Notice';
-import { InputField } from '../../../components/ui/InputField';
-import { colors } from '../../../constants/colors';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../../components/ui/Text';
 import { useAuth } from '../../../context/AuthContext';
 import { ApiError } from '../../../lib/api';
 import { JobApplication } from '../../../types';
-import {
-  listJobApplications,
-  shortlistApplication,
-  hireApplication,
-  rejectApplication,
-} from '../../../services/applications';
+import { listJobApplications, shortlistApplication, hireApplication, rejectApplication } from '../../../services/applications';
 
-const STATUS_CONFIG = {
-  APPLIED:     { label: 'Applied',     bg: '#eff6ff', text: '#1d4ed8' },
-  SHORTLISTED: { label: 'Shortlisted', bg: '#fff7ed', text: '#c2410c' },
-  HIRED:       { label: 'Hired',       bg: '#f0fdf4', text: '#15803d' },
-  REJECTED:    { label: 'Rejected',    bg: '#fef2f2', text: '#b91c1c' },
-} as const;
+const BRAND_BLUE = '#1240C7';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
+
+type AppStatus = 'APPLIED' | 'SHORTLISTED' | 'HIRED' | 'REJECTED';
+
+const STATUS_CONFIG: Record<AppStatus, { label: string; color: string; bg: string }> = {
+  APPLIED:     { label: 'Applied',     color: BRAND_BLUE, bg: '#EBF0FF' },
+  SHORTLISTED: { label: 'Shortlisted', color: ORANGE,     bg: '#FFF7ED' },
+  HIRED:       { label: 'Hired',       color: '#22C55E',  bg: '#F0FDF4' },
+  REJECTED:    { label: 'Rejected',    color: '#EF4444',  bg: '#FEF2F2' },
+};
+
+function TagPill({ text, color, bg }: { text: string; color: string; bg: string }) {
+  return (
+    <View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+      <Text style={{ color, fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium' }}>{text}</Text>
+    </View>
+  );
+}
+
+function MetaBox({ icon, label, value }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
+  return (
+    <View style={{ width: '47%', backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2E8F0', gap: 3 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+        <Ionicons name={icon} size={12} color="#94A3B8" />
+        <Text style={{ color: '#94A3B8', fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', textTransform: 'uppercase', letterSpacing: 0.3 }}>{label}</Text>
+      </View>
+      <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{value || '—'}</Text>
+    </View>
+  );
+}
+
+function PayField({ label, value, onChangeText, placeholder }: { label: string; value: string; onChangeText: (v: string) => void; placeholder: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: WHITE, borderRadius: 12, borderWidth: 1.5, borderColor: focused ? BRAND_BLUE : '#E2E8F0', paddingHorizontal: 12, height: 46, gap: 8 }}>
+        <Ionicons name="cash-outline" size={16} color={focused ? BRAND_BLUE : '#94A3B8'} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#CBD5E1"
+          keyboardType="numeric"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{ flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: '#0F172A', paddingVertical: 0 }}
+        />
+      </View>
+    </View>
+  );
+}
+
+function DateField({ label, value, onChangeText, placeholder }: { label: string; value: string; onChangeText: (v: string) => void; placeholder: string }) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: WHITE, borderRadius: 12, borderWidth: 1.5, borderColor: focused ? BRAND_BLUE : '#E2E8F0', paddingHorizontal: 12, height: 46, gap: 8 }}>
+        <Ionicons name="calendar-outline" size={16} color={focused ? BRAND_BLUE : '#94A3B8'} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#CBD5E1"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={{ flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: '#0F172A', paddingVertical: 0 }}
+        />
+      </View>
+    </View>
+  );
+}
 
 export default function ApplicationDetailScreen() {
   const { id, jobId } = useLocalSearchParams<{ id: string; jobId: string }>();
@@ -33,32 +94,22 @@ export default function ApplicationDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [noticeVariant, setNoticeVariant] = useState<'success' | 'error'>('success');
+  const [noticeOk, setNoticeOk] = useState(true);
   const [busy, setBusy] = useState(false);
   const [proposedPay, setProposedPay] = useState('');
   const [joiningDate, setJoiningDate] = useState('');
 
   useEffect(() => {
     let cancelled = false;
-
     async function load() {
-      if (!token || !isFactory || !id || !jobId) {
-        setLoading(false);
-        setError('Missing application or job information.');
-        return;
-      }
-      setLoading(true);
-      setError('');
+      if (!token || !isFactory || !id || !jobId) { setLoading(false); setError('Missing application or job information.'); return; }
+      setLoading(true); setError('');
       try {
         const items = await listJobApplications(token, jobId);
         const found = items.find((a) => a.id === id);
         if (!cancelled) {
-          if (found) {
-            setApplication(found);
-            setProposedPay(String(found.worker.salaryMin || ''));
-          } else {
-            setError('Application not found.');
-          }
+          if (found) { setApplication(found); setProposedPay(String(found.worker.salaryMin || '')); }
+          else setError('Application not found.');
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'Unable to load application');
@@ -66,366 +117,274 @@ export default function ApplicationDetailScreen() {
         if (!cancelled) setLoading(false);
       }
     }
-
     load();
     return () => { cancelled = true; };
   }, [token, isFactory, id, jobId]);
 
   async function handleShortlist() {
     if (!token || !application) return;
-    setBusy(true);
-    setNotice('');
-    try {
-      const updated = await shortlistApplication(token, application.id);
-      setApplication(updated);
-      setNotice('Candidate shortlisted successfully.');
-      setNoticeVariant('success');
-    } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : 'Unable to shortlist candidate');
-      setNoticeVariant('error');
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setNotice('');
+    try { const u = await shortlistApplication(token, application.id); setApplication(u); setNotice('Candidate shortlisted.'); setNoticeOk(true); }
+    catch (err) { setNotice(err instanceof ApiError ? err.message : 'Unable to shortlist'); setNoticeOk(false); }
+    finally { setBusy(false); }
   }
 
   async function handleHire() {
     if (!token || !application) return;
-    setBusy(true);
-    setNotice('');
+    setBusy(true); setNotice('');
     try {
-      await hireApplication(token, application.id, {
-        proposedPay: Number(proposedPay || 0),
-        joiningDate: joiningDate.trim() || undefined,
-      });
+      await hireApplication(token, application.id, { proposedPay: Number(proposedPay || 0), joiningDate: joiningDate.trim() || undefined });
       const items = await listJobApplications(token, jobId);
-      const updated = items.find((a) => a.id === application.id);
-      if (updated) setApplication(updated);
-      setNotice('Hire offer sent to the candidate.');
-      setNoticeVariant('success');
-    } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : 'Unable to complete hire');
-      setNoticeVariant('error');
-    } finally {
-      setBusy(false);
-    }
+      const u = items.find((a) => a.id === application.id);
+      if (u) setApplication(u);
+      setNotice('Hire offer sent to the candidate.'); setNoticeOk(true);
+    } catch (err) { setNotice(err instanceof ApiError ? err.message : 'Unable to hire'); setNoticeOk(false); }
+    finally { setBusy(false); }
   }
 
   async function handleReject() {
     if (!token || !application) return;
-    setBusy(true);
-    setNotice('');
-    try {
-      const updated = await rejectApplication(token, application.id);
-      setApplication(updated);
-      setNotice('Application rejected.');
-      setNoticeVariant('success');
-    } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : 'Unable to reject application');
-      setNoticeVariant('error');
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setNotice('');
+    try { const u = await rejectApplication(token, application.id); setApplication(u); setNotice('Application rejected.'); setNoticeOk(true); }
+    catch (err) { setNotice(err instanceof ApiError ? err.message : 'Unable to reject'); setNoticeOk(false); }
+    finally { setBusy(false); }
   }
 
-  const status = application?.status ?? 'APPLIED';
-  const statusCfg = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.APPLIED;
+  const status = (application?.status ?? 'APPLIED') as AppStatus;
+  const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.APPLIED;
   const canShortlist = status === 'APPLIED';
   const canHire = status === 'APPLIED' || status === 'SHORTLISTED';
   const canReject = status !== 'HIRED' && status !== 'REJECTED';
+  const workerName = application?.worker.name || 'Candidate';
+  const initials = workerName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <Screen>
-      {/* Header */}
-      <View style={styles.topBar}>
-        <Pressable style={styles.iconBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back-outline" size={20} color={colors.textInverse} />
-        </Pressable>
-        <Text style={styles.topTitle}>Application</Text>
-        <View style={styles.iconBtn} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
 
-      {loading ? (
-        <EmptyState icon="hourglass-outline" title="Loading" message="Fetching application details…" />
-      ) : error ? (
-        <EmptyState icon="cloud-offline-outline" title="Unable to load" message={error} />
-      ) : application ? (
-        <>
-          {/* Worker profile card */}
-          <SectionCard title="Candidate">
-            <View style={styles.workerHeader}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {(application.worker.name || 'W').charAt(0).toUpperCase()}
-                </Text>
-              </View>
+          {/* ── Blue header ── */}
+          <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); router.back(); }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="arrow-back-outline" size={20} color={WHITE} />
+              </Pressable>
               <View style={{ flex: 1 }}>
-                <Text style={styles.workerName}>{application.worker.name}</Text>
-                {application.worker.headline ? (
-                  <Text style={styles.workerHeadline}>{application.worker.headline}</Text>
+                <Text style={{ color: WHITE, fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4 }}>Application</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>Review candidate profile</Text>
+              </View>
+              {application ? (
+                <View style={{ backgroundColor: statusCfg.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 }}>
+                  <Text style={{ color: statusCfg.color, fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold' }}>{statusCfg.label}</Text>
+                </View>
+              ) : null}
+            </View>
+          </View>
+
+          {/* ── White body ── */}
+          <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 16 }}>
+
+            {loading ? (
+              <View style={{ alignItems: 'center', paddingVertical: 60, gap: 14 }}>
+                <ActivityIndicator size="large" color={BRAND_BLUE} />
+                <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium' }}>Loading application…</Text>
+              </View>
+            ) : error ? (
+              <View style={{ alignItems: 'center', paddingVertical: 60, gap: 10 }}>
+                <Ionicons name="cloud-offline-outline" size={44} color="#94A3B8" />
+                <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>Unable to load</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>{error}</Text>
+              </View>
+            ) : application ? (
+              <>
+                {/* Candidate card */}
+                <View style={{ backgroundColor: WHITE, borderRadius: 20, padding: 18, gap: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Candidate</Text>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                    <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: '#EBF0FF', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: BRAND_BLUE, fontSize: 18, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{initials}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>{workerName}</Text>
+                      {application.worker.headline ? (
+                        <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>{application.worker.headline}</Text>
+                      ) : null}
+                    </View>
+                  </View>
+
+                  {/* Meta grid */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                    <MetaBox icon="briefcase-outline" label="Experience" value={application.worker.experience} />
+                    <MetaBox icon="cash-outline" label="Salary Min" value={application.worker.salaryPreference} />
+                    <MetaBox icon="time-outline" label="Availability" value={application.worker.availability || 'Available'} />
+                    <MetaBox icon="swap-horizontal-outline" label="Shift" value={application.worker.shift} />
+                  </View>
+
+                  {/* Preferred areas */}
+                  {(application.worker.preferredAreas ?? []).length > 0 ? (
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.3 }}>Preferred Areas</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {(application.worker.preferredAreas ?? []).map((a) => (
+                          <TagPill key={a} text={a} color="#64748B" bg="#F1F5F9" />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {/* Preferred roles */}
+                  {(application.worker.preferredRoles ?? []).length > 0 ? (
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.3 }}>Preferred Roles</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {(application.worker.preferredRoles ?? []).map((r) => (
+                          <TagPill key={r} text={r} color={ORANGE} bg="#FFF7ED" />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {/* Skills */}
+                  {application.worker.skills.length > 0 ? (
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.3 }}>Skills</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {application.worker.skills.map((s) => (
+                          <TagPill key={s} text={s} color={BRAND_BLUE} bg="#EBF0FF" />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {/* Certifications */}
+                  {application.worker.certifications.length > 0 ? (
+                    <View style={{ gap: 8 }}>
+                      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', textTransform: 'uppercase', letterSpacing: 0.3 }}>Certifications</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {application.worker.certifications.map((c) => (
+                          <TagPill key={c} text={c} color="#64748B" bg="#F1F5F9" />
+                        ))}
+                      </View>
+                    </View>
+                  ) : null}
+
+                  {/* Phone */}
+                  {application.workerPhone ? (
+                    <Pressable
+                      onPress={() => Linking.openURL(`tel:${application.workerPhone}`)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F0FDF4', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#BBF7D0' }}
+                    >
+                      <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: '#22C55E', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="call-outline" size={18} color={WHITE} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#15803D', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>{application.workerPhone}</Text>
+                        <Text style={{ color: '#4ADE80', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 1 }}>Tap to call</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color="#22C55E" />
+                    </Pressable>
+                  ) : null}
+
+                  {/* View full profile */}
+                  {application.worker.id ? (
+                    <Pressable
+                      onPress={() => { Haptics.selectionAsync(); router.push(`/worker/${application.worker.id}` as never); }}
+                      style={{ height: 42, backgroundColor: '#F1F5F9', borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    >
+                      <Ionicons name="person-outline" size={16} color="#475569" />
+                      <Text style={{ color: '#475569', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>View full profile</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                {/* Candidate note */}
+                {application.note ? (
+                  <View style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}>
+                    <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Candidate Note</Text>
+                    <View style={{ flexDirection: 'row', gap: 10, backgroundColor: '#EBF0FF', borderRadius: 12, padding: 12 }}>
+                      <Ionicons name="chatbox-ellipses-outline" size={16} color={BRAND_BLUE} style={{ marginTop: 2 }} />
+                      <Text style={{ flex: 1, color: '#1E40AF', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', lineHeight: 20 }}>{application.note}</Text>
+                    </View>
+                  </View>
                 ) : null}
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
-                <Text style={[styles.statusText, { color: statusCfg.text }]}>{statusCfg.label}</Text>
-              </View>
-            </View>
 
-            {/* Profile metrics */}
-            <View style={styles.metaGrid}>
-              <MetaBox icon="briefcase-outline" label="Experience" value={application.worker.experience} />
-              <MetaBox icon="cash-outline" label="Salary min" value={application.worker.salaryPreference} />
-              <MetaBox icon="time-outline" label="Availability" value={application.worker.availability || 'Available'} />
-              <MetaBox icon="swap-horizontal-outline" label="Shift" value={application.worker.shift} />
-            </View>
+                {/* Actions */}
+                <View style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Actions</Text>
 
-            {/* Preferred areas */}
-            {(application.worker.preferredAreas ?? []).length > 0 ? (
-              <View style={styles.tagSection}>
-                <Text style={styles.tagLabel}>Preferred areas</Text>
-                <View style={styles.tagRow}>
-                  {(application.worker.preferredAreas ?? []).map((area) => (
-                    <View key={area} style={styles.tag}>
-                      <Text style={styles.tagText}>{area}</Text>
+                  {notice ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: noticeOk ? '#F0FDF4' : '#FEF2F2', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: noticeOk ? '#BBF7D0' : '#FECACA' }}>
+                      <Ionicons name={noticeOk ? 'checkmark-circle' : 'alert-circle'} size={16} color={noticeOk ? '#22C55E' : '#EF4444'} />
+                      <Text style={{ flex: 1, color: noticeOk ? '#15803D' : '#B91C1C', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>{notice}</Text>
                     </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
+                  ) : null}
 
-            {/* Preferred roles */}
-            {(application.worker.preferredRoles ?? []).length > 0 ? (
-              <View style={styles.tagSection}>
-                <Text style={styles.tagLabel}>Preferred roles</Text>
-                <View style={styles.tagRow}>
-                  {(application.worker.preferredRoles ?? []).map((role) => (
-                    <View key={role} style={[styles.tag, styles.tagRole]}>
-                      <Text style={[styles.tagText, styles.tagRoleText]}>{role}</Text>
+                  {canHire ? (
+                    <>
+                      <PayField label="Proposed Pay (₹)" value={proposedPay} onChangeText={setProposedPay} placeholder="e.g. 18000" />
+                      <DateField label="Joining Date (YYYY-MM-DD)" value={joiningDate} onChangeText={setJoiningDate} placeholder="e.g. 2024-02-01" />
+                    </>
+                  ) : null}
+
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {canShortlist ? (
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleShortlist(); }}
+                        disabled={busy}
+                        style={{ flex: 1, height: 46, backgroundColor: '#FFF7ED', borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                      >
+                        {busy ? <ActivityIndicator size="small" color={ORANGE} /> : <Ionicons name="star-outline" size={16} color={ORANGE} />}
+                        <Text style={{ color: ORANGE, fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold' }}>Shortlist</Text>
+                      </Pressable>
+                    ) : null}
+                    {canHire ? (
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleHire(); }}
+                        disabled={busy}
+                        style={{ flex: 1, height: 46, backgroundColor: BRAND_BLUE, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                      >
+                        {busy ? <ActivityIndicator size="small" color={WHITE} /> : <Ionicons name="checkmark-circle-outline" size={16} color={WHITE} />}
+                        <Text style={{ color: WHITE, fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold' }}>Hire</Text>
+                      </Pressable>
+                    ) : null}
+                    {canReject ? (
+                      <Pressable
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleReject(); }}
+                        disabled={busy}
+                        style={{ flex: 1, height: 46, backgroundColor: '#FEF2F2', borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 }}
+                      >
+                        {busy ? <ActivityIndicator size="small" color="#EF4444" /> : <Ionicons name="close-circle-outline" size={16} color="#EF4444" />}
+                        <Text style={{ color: '#EF4444', fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold' }}>Reject</Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
+
+                  {status === 'HIRED' ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12 }}>
+                      <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                      <Text style={{ flex: 1, color: '#15803D', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>Hire offer sent — awaiting confirmation</Text>
                     </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
+                  ) : null}
 
-            {/* Skills */}
-            {application.worker.skills.length > 0 ? (
-              <View style={styles.tagSection}>
-                <Text style={styles.tagLabel}>Skills</Text>
-                <View style={styles.tagRow}>
-                  {application.worker.skills.map((skill) => (
-                    <View key={skill} style={[styles.tag, styles.tagSkill]}>
-                      <Text style={[styles.tagText, styles.tagSkillText]}>{skill}</Text>
+                  {status === 'REJECTED' ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FEF2F2', borderRadius: 12, padding: 12 }}>
+                      <Ionicons name="close-circle" size={16} color="#EF4444" />
+                      <Text style={{ flex: 1, color: '#B91C1C', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>This application has been rejected</Text>
                     </View>
-                  ))}
+                  ) : null}
                 </View>
-              </View>
+              </>
             ) : null}
 
-            {/* Certifications */}
-            {application.worker.certifications.length > 0 ? (
-              <View style={styles.tagSection}>
-                <Text style={styles.tagLabel}>Certifications</Text>
-                <View style={styles.tagRow}>
-                  {application.worker.certifications.map((cert) => (
-                    <View key={cert} style={styles.tag}>
-                      <Text style={styles.tagText}>{cert}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
-
-            {/* Worker phone — visible to factory */}
-            {application.workerPhone ? (
-              <Pressable
-                style={styles.phoneBtn}
-                onPress={() => Linking.openURL(`tel:${application.workerPhone}`)}
-              >
-                <Ionicons name="call-outline" size={16} color="#15803d" />
-                <Text style={styles.phoneBtnText}>{application.workerPhone}</Text>
-                <Text style={styles.phoneBtnHint}>Tap to call</Text>
-              </Pressable>
-            ) : null}
-
-            {/* View full profile button */}
-            {application.worker.id ? (
-              <Pressable
-                style={styles.profileBtn}
-                onPress={() => router.push(`/worker/${application.worker.id}` as never)}
-              >
-                <Ionicons name="person-outline" size={14} color={colors.primary} />
-                <Text style={styles.profileBtnText}>View full worker profile</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-              </Pressable>
-            ) : null}
-          </SectionCard>
-
-          {/* Application note */}
-          {application.note ? (
-            <SectionCard title="Candidate note">
-              <View style={styles.noteBox}>
-                <Ionicons name="chatbox-ellipses-outline" size={16} color="#1d4ed8" />
-                <Text style={styles.noteText}>{application.note}</Text>
-              </View>
-            </SectionCard>
-          ) : null}
-
-          {/* Actions */}
-          <SectionCard title="Actions">
-            <Notice message={notice} variant={noticeVariant} />
-
-            {canHire ? (
-              <View style={styles.hireForm}>
-                <InputField
-                  icon="cash-outline"
-                  placeholder="Proposed pay (₹)"
-                  value={proposedPay}
-                  onChangeText={setProposedPay}
-                  keyboardType="numeric"
-                />
-                <InputField
-                  icon="calendar-outline"
-                  placeholder="Joining date (YYYY-MM-DD)"
-                  value={joiningDate}
-                  onChangeText={setJoiningDate}
-                />
-              </View>
-            ) : null}
-
-            <View style={styles.actionRow}>
-              {canShortlist ? (
-                <Pressable
-                  style={[styles.shortlistBtn, busy && styles.disabledBtn]}
-                  onPress={handleShortlist}
-                  disabled={busy}
-                >
-                  <Ionicons name="star-outline" size={15} color={colors.textInverse} />
-                  <Text style={styles.shortlistText}>{busy ? '…' : 'Shortlist'}</Text>
-                </Pressable>
-              ) : null}
-
-              {canHire ? (
-                <Pressable
-                  style={[styles.hireBtn, busy && styles.disabledBtn]}
-                  onPress={handleHire}
-                  disabled={busy}
-                >
-                  <Ionicons name="checkmark-circle-outline" size={15} color={colors.textInverse} />
-                  <Text style={styles.hireBtnText}>{busy ? '…' : 'Hire'}</Text>
-                </Pressable>
-              ) : null}
-
-              {canReject ? (
-                <Pressable
-                  style={[styles.rejectBtn, busy && styles.disabledBtn]}
-                  onPress={handleReject}
-                  disabled={busy}
-                >
-                  <Ionicons name="close-circle-outline" size={15} color="#b91c1c" />
-                  <Text style={styles.rejectBtnText}>{busy ? '…' : 'Reject'}</Text>
-                </Pressable>
-              ) : null}
-            </View>
-
-            {status === 'HIRED' ? (
-              <View style={styles.hiredBanner}>
-                <Ionicons name="checkmark-circle" size={16} color="#15803d" />
-                <Text style={styles.hiredBannerText}>Hire offer sent — awaiting worker confirmation</Text>
-              </View>
-            ) : null}
-
-            {status === 'REJECTED' ? (
-              <View style={styles.rejectedBanner}>
-                <Ionicons name="close-circle" size={16} color="#b91c1c" />
-                <Text style={styles.rejectedBannerText}>This application has been rejected</Text>
-              </View>
-            ) : null}
-          </SectionCard>
-        </>
-      ) : null}
-    </Screen>
-  );
-}
-
-function MetaBox({ icon, label, value }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
-  return (
-    <View style={styles.metaBox}>
-      <Ionicons name={icon} size={13} color={colors.textMuted} />
-      <View>
-        <Text style={styles.metaLabel}>{label}</Text>
-        <Text style={styles.metaValue}>{value}</Text>
-      </View>
+            <View style={{ height: 16 }} />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  topTitle: { color: colors.textInverse, fontSize: 20, fontWeight: '800' },
-  iconBtn: { width: 42, height: 42, borderRadius: 14, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  workerHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  avatar: { width: 48, height: 48, borderRadius: 14, backgroundColor: colors.panel, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: colors.textInverse, fontWeight: '800', fontSize: 20 },
-  workerName: { color: colors.text, fontWeight: '800', fontSize: 17 },
-  workerHeadline: { color: colors.textSoft, fontSize: 13, marginTop: 3 },
-  statusBadge: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, alignSelf: 'flex-start' },
-  statusText: { fontSize: 12, fontWeight: '800' },
-  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  metaBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    width: '47%', backgroundColor: '#f8fafc', borderRadius: 12, padding: 10,
-  },
-  metaLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '600' },
-  metaValue: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 1 },
-  tagSection: { gap: 6 },
-  tagLabel: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { backgroundColor: '#f1f5f9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  tagText: { color: '#475569', fontSize: 12, fontWeight: '600' },
-  tagRole: { backgroundColor: '#fff7ed' },
-  tagRoleText: { color: '#c2410c' },
-  tagSkill: { backgroundColor: colors.primarySoft },
-  tagSkillText: { color: '#c2410c' },
-  phoneBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#f0fdf4', borderRadius: 14, padding: 14,
-    borderWidth: 1, borderColor: '#bbf7d0',
-  },
-  phoneBtnText: { color: '#15803d', fontWeight: '800', fontSize: 16, flex: 1 },
-  phoneBtnHint: { color: '#16a34a', fontSize: 12, fontWeight: '600' },
-  profileBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.primary,
-    borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8,
-  },
-  profileBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  noteBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#eff6ff', borderRadius: 12, padding: 12 },
-  noteText: { color: '#1d4ed8', lineHeight: 20, flex: 1, fontSize: 13 },
-  hireForm: { gap: 8 },
-  actionRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
-  shortlistBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: colors.panel, borderRadius: 14, paddingVertical: 14,
-  },
-  shortlistText: { color: colors.textInverse, fontWeight: '800', fontSize: 14 },
-  hireBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 14,
-  },
-  hireBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: 14 },
-  rejectBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, backgroundColor: '#fef2f2', borderRadius: 14, paddingVertical: 14,
-    borderWidth: 1, borderColor: '#fecaca',
-  },
-  rejectBtnText: { color: '#b91c1c', fontWeight: '800', fontSize: 14 },
-  disabledBtn: { opacity: 0.45 },
-  hiredBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f0fdf4', borderRadius: 12, padding: 12,
-  },
-  hiredBannerText: { color: '#15803d', fontWeight: '700', fontSize: 13, flex: 1 },
-  rejectedBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#fef2f2', borderRadius: 12, padding: 12,
-  },
-  rejectedBannerText: { color: '#b91c1c', fontWeight: '700', fontSize: 13, flex: 1 },
-});

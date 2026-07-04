@@ -1,20 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Screen } from '../../components/ui/Screen';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { Notice } from '../../components/ui/Notice';
-import { JobDetailCard } from '../../components/jobs/JobDetailCard';
-import { colors } from '../../constants/colors';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 import { Job } from '../../types';
 import { getJobDetails, applyToJob } from '../../services/jobs';
 import { isJobSaved, toggleSavedJob } from '../../services/savedJobs';
 
+const BRAND_BLUE = '#1240C7';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
+
 export default function JobDetailsScreen() {
-  const params = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { token, isWorker } = useAuth();
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,59 +26,30 @@ export default function JobDetailsScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [note, setNote] = useState('');
   const [applied, setApplied] = useState(false);
+  const [noteFocused, setNoteFocused] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function load() {
-      if (!params.id) {
-        setLoading(false);
-        setError('Missing job id.');
-        return;
-      }
-
-      setLoading(true);
-      setError('');
-      try {
-        const [details, savedState] = await Promise.all([getJobDetails(params.id), isJobSaved(params.id)]);
-        if (!cancelled) {
-          setJob(details);
-          setSaved(savedState);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load job details');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [params.id]);
+    if (!id) { setLoading(false); setError('Missing job ID.'); return; }
+    setLoading(true); setError('');
+    Promise.all([getJobDetails(id), isJobSaved(id)])
+      .then(([details, savedState]) => {
+        if (!cancelled) { setJob(details); setSaved(savedState); }
+      })
+      .catch((err) => { if (!cancelled) setError(err instanceof ApiError ? err.message : 'Unable to load job details'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
 
   async function handleApply() {
     if (!job) return;
-    if (!token || !isWorker) {
-      setNotice('Log in as a worker to apply for this role.');
-      return;
-    }
-
-    setSubmitting(true);
-    setNotice('');
+    if (!token || !isWorker) { setNotice('Log in as a job seeker to apply.'); return; }
+    setSubmitting(true); setNotice('');
     try {
       await applyToJob(token, job.id, note.trim() || undefined);
-      setApplied(true);
-      setNote('');
-      setNotice('Application submitted successfully.');
-    } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : 'Unable to apply right now');
-    } finally {
-      setSubmitting(false);
-    }
+      setApplied(true); setNote(''); setNotice('Application submitted successfully.');
+    } catch (err) { setNotice(err instanceof ApiError ? err.message : 'Unable to apply right now'); }
+    finally { setSubmitting(false); }
   }
 
   async function handleSave() {
@@ -86,107 +59,195 @@ export default function JobDetailsScreen() {
     setNotice(nextSaved ? 'Job saved for later.' : 'Removed from saved jobs.');
   }
 
+  const isNoticeGood = notice.includes('successfully') || notice.includes('saved');
+  const isNoticeWarn = notice.includes('Log in') || notice.includes('already');
+
   return (
-    <Screen>
-      <View style={styles.topBar}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back-outline" size={20} color={colors.textInverse} />
-        </Pressable>
-        <Text style={styles.topTitle}>Job details</Text>
-        <Pressable style={styles.iconButton} onPress={handleSave}>
-          <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={colors.textInverse} />
-        </Pressable>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
 
-      {loading ? <EmptyState icon="hourglass-outline" title="Loading job" message="Fetching job details…" /> : null}
-      {!loading && error ? <EmptyState icon="cloud-offline-outline" title="Unable to load job" message={error} /> : null}
-      {!loading && !error && job ? <JobDetailCard job={job} /> : null}
-
-      <Notice
-        message={notice}
-        variant={notice.includes('successfully') || notice.includes('saved') ? 'success' : notice.includes('already') ? 'warning' : notice ? 'error' : 'info'}
-      />
-
-      {job && isWorker && !applied ? (
-        <View style={styles.noteWrap}>
-          <Text style={styles.noteLabel}>Message to factory (optional)</Text>
-          <TextInput
-            style={styles.noteInput}
-            placeholder="Tell them why you're a great fit…"
-            placeholderTextColor={colors.textMuted}
-            value={note}
-            onChangeText={setNote}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-          />
-        </View>
-      ) : null}
-
-      {job ? (
-        <View style={styles.actionRow}>
-          <Pressable style={styles.secondaryButton} onPress={() => router.push('/worker/saved')}>
-            <Text style={styles.secondaryButtonText}>Saved jobs</Text>
-          </Pressable>
-          {applied ? (
-            <View style={[styles.primaryButton, styles.appliedButton]}>
-              <Ionicons name="checkmark-circle" size={16} color="#fff" />
-              <Text style={styles.primaryButtonText}>Applied!</Text>
+          {/* ── Blue header ── */}
+          <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); router.back(); }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="arrow-back-outline" size={20} color={WHITE} />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: WHITE, fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4 }} numberOfLines={1}>
+                  {loading ? 'Job Details' : (job?.title || job?.role || 'Job Details')}
+                </Text>
+                {job?.company ? (
+                  <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>{job.company}</Text>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); handleSave(); }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: saved ? ORANGE : 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name={saved ? 'bookmark' : 'bookmark-outline'} size={20} color={WHITE} />
+              </Pressable>
             </View>
-          ) : (
-            <Pressable style={styles.primaryButton} onPress={handleApply} disabled={submitting || !isWorker}>
-              <Text style={styles.primaryButtonText}>{submitting ? 'Applying…' : isWorker ? 'Apply now' : 'Worker only'}</Text>
-            </Pressable>
-          )}
-        </View>
-      ) : null}
-    </Screen>
+          </View>
+
+          {/* ── White body ── */}
+          <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 16 }}>
+
+            {loading ? (
+              <View style={{ alignItems: 'center', paddingVertical: 60, gap: 14 }}>
+                <ActivityIndicator size="large" color={BRAND_BLUE} />
+                <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium' }}>Loading job details…</Text>
+              </View>
+            ) : error ? (
+              <View style={{ alignItems: 'center', paddingVertical: 60, gap: 10 }}>
+                <Ionicons name="cloud-offline-outline" size={44} color="#94A3B8" />
+                <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>Unable to load job</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>{error}</Text>
+              </View>
+            ) : job ? (
+              <>
+                {/* Job overview card */}
+                <View style={{ backgroundColor: WHITE, borderRadius: 20, padding: 18, gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View>
+                    <Text style={{ color: '#0F172A', fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.3 }}>{job.title || job.role}</Text>
+                    {job.company ? <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', marginTop: 4 }}>{job.company}</Text> : null}
+                  </View>
+
+                  {/* Meta row */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                    {job.area ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: '#EBF0FF', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="location-outline" size={15} color={BRAND_BLUE} />
+                        </View>
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{job.area}</Text>
+                      </View>
+                    ) : null}
+                    {job.shift ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="time-outline" size={15} color={ORANGE} />
+                        </View>
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{job.shift}</Text>
+                      </View>
+                    ) : null}
+                    {job.pay ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="cash-outline" size={15} color="#22C55E" />
+                        </View>
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{job.pay}</Text>
+                      </View>
+                    ) : null}
+                    {job.employmentType ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="briefcase-outline" size={15} color="#64748B" />
+                        </View>
+                        <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{job.employmentType}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* Status badge */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: (job.status || 'OPEN') === 'OPEN' ? '#22C55E' : '#94A3B8' }} />
+                    <Text style={{ color: (job.status || 'OPEN') === 'OPEN' ? '#15803D' : '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>
+                      {(job.status || 'OPEN') === 'OPEN' ? 'Actively hiring' : 'Position closed'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Description */}
+                {job.description ? (
+                  <View style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, gap: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>About this role</Text>
+                    <Text style={{ color: '#475569', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', lineHeight: 21 }}>{job.description}</Text>
+                  </View>
+                ) : null}
+
+                {/* Skills */}
+                {job.skills.length > 0 ? (
+                  <View style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, gap: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                    <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Skills required</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      {job.skills.map((s) => (
+                        <View key={s} style={{ backgroundColor: '#EBF0FF', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+                          <Text style={{ color: BRAND_BLUE, fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{s}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Notice */}
+                {notice ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: isNoticeGood ? '#F0FDF4' : isNoticeWarn ? '#FFF7ED' : '#FEF2F2', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: isNoticeGood ? '#BBF7D0' : isNoticeWarn ? '#FED7AA' : '#FECACA' }}>
+                    <Ionicons name={isNoticeGood ? 'checkmark-circle' : 'alert-circle'} size={18} color={isNoticeGood ? '#22C55E' : isNoticeWarn ? ORANGE : '#EF4444'} />
+                    <Text style={{ flex: 1, color: isNoticeGood ? '#15803D' : isNoticeWarn ? '#92400E' : '#B91C1C', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>{notice}</Text>
+                  </View>
+                ) : null}
+
+                {/* Message note field */}
+                {isWorker && !applied ? (
+                  <View style={{ gap: 8 }}>
+                    <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>Message to employer (optional)</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', backgroundColor: WHITE, borderRadius: 14, borderWidth: 1.5, borderColor: noteFocused ? BRAND_BLUE : '#E2E8F0', paddingHorizontal: 14, paddingVertical: 12, gap: 10, minHeight: 90 }}>
+                      <Ionicons name="chatbox-outline" size={17} color={noteFocused ? BRAND_BLUE : '#94A3B8'} style={{ marginTop: 2 }} />
+                      <TextInput
+                        value={note}
+                        onChangeText={setNote}
+                        placeholder="Tell them why you're a great fit…"
+                        placeholderTextColor="#CBD5E1"
+                        multiline
+                        onFocus={() => setNoteFocused(true)}
+                        onBlur={() => setNoteFocused(false)}
+                        textAlignVertical="top"
+                        style={{ flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: '#0F172A' }}
+                      />
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* Action buttons */}
+                <View style={{ flexDirection: 'row', gap: 12 }}>
+                  <Pressable
+                    onPress={() => { Haptics.selectionAsync(); router.push('/worker/saved' as never); }}
+                    style={{ flex: 1, height: 52, backgroundColor: '#F1F5F9', borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: '#475569', fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Saved Jobs</Text>
+                  </Pressable>
+                  {applied ? (
+                    <View style={{ flex: 2, height: 52, backgroundColor: '#F0FDF4', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <Ionicons name="checkmark-circle" size={20} color="#22C55E" />
+                      <Text style={{ color: '#15803D', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Applied!</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleApply(); }}
+                      disabled={submitting || !isWorker}
+                      style={{ flex: 2, height: 52, backgroundColor: isWorker ? BRAND_BLUE : '#94A3B8', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                    >
+                      {submitting
+                        ? <ActivityIndicator size="small" color={WHITE} />
+                        : <Ionicons name="paper-plane-outline" size={18} color={WHITE} />
+                      }
+                      <Text style={{ color: WHITE, fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                        {submitting ? 'Applying…' : isWorker ? 'Apply Now' : 'Workers Only'}
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+              </>
+            ) : null}
+
+            <View style={{ height: 16 }} />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  topTitle: { color: colors.textInverse, fontSize: 20, fontWeight: '800' },
-  iconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.panel,
-  },
-  noteWrap: { gap: 6 },
-  noteLabel: { color: colors.text, fontWeight: '700', fontSize: 13 },
-  noteInput: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    minHeight: 80,
-  },
-  actionRow: { flexDirection: 'row', gap: 10 },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: { color: colors.text, fontWeight: '800' },
-  primaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  appliedButton: { backgroundColor: '#16a34a' },
-  primaryButtonText: { color: colors.textInverse, fontWeight: '800' },
-});

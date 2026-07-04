@@ -11,16 +11,16 @@
     "welcome": "Welcome",
     "login": "Login",
     "signup": "Sign Up",
-    "worker": "Worker",
-    "factory": "Factory",
+    "worker": "Job Seeker",
+    "factory": "Employer",
     "welcomeSubtitle": "Leadership and industrial hiring marketplace",
     "chooseUsage": "Choose how you want to use Sketu",
     "workerChoiceText": "Find jobs by area, role, pay and shift.",
-    "factoryChoiceText": "Search workers, shortlist and hire faster.",
-    "loginAsWorker": "Login as worker",
-    "loginAsFactory": "Login as factory",
-    "workerSignup": "Worker sign up",
-    "factorySignup": "Factory sign up",
+    "factoryChoiceText": "Search job seekers, shortlist and hire faster.",
+    "loginAsWorker": "Login as Job Seeker",
+    "loginAsFactory": "Login as Employer",
+    "workerSignup": "Job Seeker sign up",
+    "factorySignup": "Employer sign up",
     "loginAs": "Login as {{type}}",
     "loginSubtitle": "Enter your name and mobile number to continue.",
     "namePlaceholder": "Your name",
@@ -51,7 +51,7 @@
     "fullNamePlaceholder": "Full name",
     "phonePlaceholder": "Mobile number",
     "createPasswordPlaceholder": "Create password",
-    "factoryDescriptionPlaceholder": "Factory description",
+    "factoryDescriptionPlaceholder": "Company description",
     "industrialArea": "Industrial area",
     "preferredIndustrialArea": "Preferred industrial area",
     "primaryRole": "Primary role",
@@ -60,8 +60,8 @@
     "createAccount": "Create account"
   },
   "userType": {
-    "worker": "Worker",
-    "factory": "Factory"
+    "worker": "Job Seeker",
+    "factory": "Employer"
   },
   "tabs": {
     "jobs": "Jobs",

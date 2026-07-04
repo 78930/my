@@ -11,16 +11,16 @@
     "welcome": "స్వాగతం",
     "login": "లాగిన్",
     "signup": "సైన్ అప్",
-    "worker": "వర్కర్",
-    "factory": "ఫ్యాక్టరీ",
+    "worker": "జాబ్ సీకర్",
+    "factory": "యజమాని",
     "welcomeSubtitle": "లీడర్షిప్ మరియు ఇండస్ట్రియల్ హైరింగ్ మార్కెట్‌ప్లేస్",
     "chooseUsage": "Sketu ను ఎలా ఉపయోగించాలో ఎంచుకోండి",
     "workerChoiceText": "ఏరియా, పాత్ర, జీతం మరియు షిఫ్ట్ ఆధారంగా ఉద్యోగాలు కనుగొనండి.",
-    "factoryChoiceText": "వర్కర్లను వెతకండి, షార్ట్‌లిస్ట్ చేసి త్వరగా నియమించండి.",
-    "loginAsWorker": "వర్కర్‌గా లాగిన్ అవ్వండి",
-    "loginAsFactory": "ఫ్యాక్టరీగా లాగిన్ అవ్వండి",
-    "workerSignup": "వర్కర్ సైన్ అప్",
-    "factorySignup": "ఫ్యాక్టరీ సైన్ అప్",
+    "factoryChoiceText": "జాబ్ సీకర్లను వెతకండి, షార్ట్‌లిస్ట్ చేసి త్వరగా నియమించండి.",
+    "loginAsWorker": "జాబ్ సీకర్‌గా లాగిన్ అవ్వండి",
+    "loginAsFactory": "యజమానిగా లాగిన్ అవ్వండి",
+    "workerSignup": "జాబ్ సీకర్ సైన్ అప్",
+    "factorySignup": "యజమాని సైన్ అప్",
     "loginAs": "{{type}} గా లాగిన్ అవ్వండి",
     "loginSubtitle": "కొనసాగించడానికి మీ పేరు మరియు మొబైల్ నంబర్ నమోదు చేయండి.",
     "namePlaceholder": "మీ పేరు",
@@ -51,7 +51,7 @@
     "fullNamePlaceholder": "పూర్తి పేరు",
     "phonePlaceholder": "మొబైల్ నంబర్",
     "createPasswordPlaceholder": "పాస్‌వర్డ్ సృష్టించండి",
-    "factoryDescriptionPlaceholder": "ఫ్యాక్టరీ వివరణ",
+    "factoryDescriptionPlaceholder": "కంపెనీ వివరణ",
     "industrialArea": "ఇండస్ట్రియల్ ఏరియా",
     "preferredIndustrialArea": "ఇష్టమైన ఇండస్ట్రియల్ ఏరియా",
     "primaryRole": "ప్రధాన పాత్ర",
@@ -60,8 +60,8 @@
     "createAccount": "ఖాతాను సృష్టించండి"
   },
   "userType": {
-    "worker": "వర్కర్",
-    "factory": "ఫ్యాక్టరీ"
+    "worker": "జాబ్ సీకర్",
+    "factory": "యజమాని"
   },
   "tabs": {
     "jobs": "ఉద్యోగాలు",

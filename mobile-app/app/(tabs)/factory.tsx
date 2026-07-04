@@ -1,25 +1,58 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { colors } from '../../constants/colors';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { FactoryDashboardSummary } from '../../types';
 import { getFactoryDashboard } from '../../services/factory';
 
-const initialSummary: FactoryDashboardSummary = {
-  openJobs: 0,
-  totalApplications: 0,
-  shortlisted: 0,
-  hires: 0,
-};
+const BRAND_BLUE = '#1240C7';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
+
+const initialSummary: FactoryDashboardSummary = { openJobs: 0, totalApplications: 0, shortlisted: 0, hires: 0 };
+
+function StatBox({ icon, label, value, color, bg }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string; color: string; bg: string }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: bg, borderRadius: 16, padding: 14, alignItems: 'center', gap: 6 }}>
+      <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: color + '22', alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <Text style={{ color, fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{value}</Text>
+      <Text style={{ color, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', textAlign: 'center', opacity: 0.8 }}>{label}</Text>
+    </View>
+  );
+}
+
+function ActionRow({ icon, iconBg, iconColor, title, subtitle, onPress }: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconBg: string; iconColor: string; title: string; subtitle: string; onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      style={{ backgroundColor: WHITE, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderColor: '#E2E8F0' }}
+    >
+      <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: iconBg, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={20} color={iconColor} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>{title}</Text>
+        <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>{subtitle}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+    </Pressable>
+  );
+}
 
 export default function FactoryTab() {
   const { user, token, isFactory, signOut } = useAuth();
   const [summary, setSummary] = useState<FactoryDashboardSummary>(initialSummary);
   const [loading, setLoading] = useState(true);
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   useEffect(() => {
     let cancelled = false;
@@ -29,9 +62,7 @@ export default function FactoryTab() {
       try {
         const data = await getFactoryDashboard(token);
         if (!cancelled) setSummary(data);
-      } catch {
-        // non-critical, show zeros
-      } finally {
+      } catch { /* show zeros */ } finally {
         if (!cancelled) setLoading(false);
       }
     }
@@ -42,172 +73,70 @@ export default function FactoryTab() {
   const val = (n: number) => (loading ? '…' : String(n));
 
   return (
-    <Screen>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>Sketu</Text>
-          <Text style={styles.sub}>
-            {user ? `Welcome, ${user.name}` : 'Factory hiring dashboard'}
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <Pressable style={styles.iconBtn} onPress={() => router.push('/notifications' as never)}>
-            <Ionicons name="notifications-outline" size={20} color={colors.textInverse} />
-          </Pressable>
-          <Pressable
-            style={styles.logoutBtn}
-            onPress={async () => { await signOut(); router.replace('/auth/welcome'); }}
-          >
-            <Ionicons name="log-out-outline" size={18} color={colors.textInverse} />
-          </Pressable>
-        </View>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
 
-      {/* Stats row */}
-      <View style={styles.statsRow}>
-        <StatChip icon="briefcase-outline" label="Open jobs" value={val(summary.openJobs)} color="#3b82f6" bg="#eff6ff" />
-        <StatChip icon="people-outline" label="Applied" value={val(summary.totalApplications)} color="#8b5cf6" bg="#f5f3ff" />
-        <StatChip icon="star-outline" label="Shortlisted" value={val(summary.shortlisted)} color="#f59e0b" bg="#fffbeb" />
-        <StatChip icon="checkmark-circle-outline" label="Hired" value={val(summary.hires)} color="#16a34a" bg="#f0fdf4" />
-      </View>
+          {/* ── Blue header ───────────────────────────────────── */}
+          <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular' }}>Employer</Text>
+                <Text style={{ color: WHITE, fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4, marginTop: 2 }}>
+                  {`Hi, ${firstName}! 👋`}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable onPress={() => { Haptics.selectionAsync(); router.push('/notifications' as never); }} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="notifications-outline" size={20} color={WHITE} />
+                </Pressable>
+                <Pressable onPress={async () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); await signOut(); router.replace('/auth/welcome'); }} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="log-out-outline" size={20} color={WHITE} />
+                </Pressable>
+              </View>
+            </View>
 
-      {/* First-time nudge */}
-      {!loading && summary.openJobs === 0 ? (
-        <Pressable style={styles.nudgeCard} onPress={() => router.push('/factory/post-job')}>
-          <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.nudgeTitle}>Post your first job</Text>
-            <Text style={styles.nudgeText}>You have no open jobs yet. Tap here to create your first opening and start receiving applications.</Text>
+            {/* Stats row */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <StatBox icon="briefcase-outline" label="Open Jobs" value={val(summary.openJobs)} color="#60A5FA" bg="rgba(96,165,250,0.18)" />
+              <StatBox icon="people-outline" label="Applied" value={val(summary.totalApplications)} color="#A78BFA" bg="rgba(167,139,250,0.18)" />
+              <StatBox icon="star-outline" label="Shortlisted" value={val(summary.shortlisted)} color={ORANGE} bg="rgba(255,140,0,0.18)" />
+              <StatBox icon="checkmark-circle-outline" label="Hired" value={val(summary.hires)} color="#34D399" bg="rgba(52,211,153,0.18)" />
+            </View>
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </Pressable>
-      ) : null}
 
-      {/* Quick actions */}
-      <SectionCard title="Quick actions">
-        <View style={styles.quickGrid}>
-          <Pressable style={styles.quickCard} onPress={() => router.push('/factory/post-job')}>
-            <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Post a job</Text>
-            <Text style={styles.quickText}>Create a new opening with role, area, shift and pay details.</Text>
-          </Pressable>
-          <Pressable style={styles.quickCard} onPress={() => router.push('/factory/pipeline')}>
-            <Ionicons name="git-network-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Candidate pipeline</Text>
-            <Text style={styles.quickText}>Move applicants from applied to shortlisted to hired.</Text>
-          </Pressable>
-        </View>
+          {/* ── White body ────────────────────────────────────── */}
+          <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 14 }}>
 
-        <View style={styles.quickGrid}>
-          <Pressable style={styles.quickCard} onPress={() => router.push('/factory/my-jobs' as never)}>
-            <Ionicons name="list-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>My jobs</Text>
-            <Text style={styles.quickText}>View, close or reopen your posted job openings.</Text>
-          </Pressable>
-          <Pressable style={styles.quickCard} onPress={() => router.push('/(tabs)/talent')}>
-            <Ionicons name="search-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Search talent</Text>
-            <Text style={styles.quickText}>Browse live worker profiles by area and role.</Text>
-          </Pressable>
-        </View>
+            {/* First-job nudge */}
+            {!loading && summary.openJobs === 0 ? (
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); router.push('/factory/post-job' as never); }}
+                style={{ backgroundColor: '#EBF0FF', borderRadius: 18, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1.5, borderColor: BRAND_BLUE + '33' }}
+              >
+                <View style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: BRAND_BLUE, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="add-circle-outline" size={24} color={WHITE} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: BRAND_BLUE, fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Post your first job</Text>
+                  <Text style={{ color: '#475569', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 3, lineHeight: 18 }}>
+                    No open jobs yet. Create an opening to start receiving applications.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={BRAND_BLUE} />
+              </Pressable>
+            ) : null}
 
-        <Pressable style={styles.profileCard} onPress={() => router.push('/(tabs)/profile')}>
-          <Ionicons name="business-outline" size={22} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.quickTitle}>Company profile</Text>
-            <Text style={styles.quickText}>Update factory details, location and contact info.</Text>
+            <Text style={{ color: '#0F172A', fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold' }}>Quick actions</Text>
+
+            <ActionRow icon="add-circle-outline" iconBg="#EBF0FF" iconColor={BRAND_BLUE} title="Post a job" subtitle="Create a new opening with role, area, shift & pay" onPress={() => router.push('/factory/post-job' as never)} />
+            <ActionRow icon="git-network-outline" iconBg="#FFF7ED" iconColor={ORANGE} title="Candidate pipeline" subtitle="Move applicants from applied → shortlisted → hired" onPress={() => router.push('/factory/pipeline' as never)} />
+            <ActionRow icon="list-outline" iconBg="#F0FDF4" iconColor="#22C55E" title="My jobs" subtitle="View, close or reopen your posted openings" onPress={() => router.push('/factory/my-jobs' as never)} />
+            <ActionRow icon="people-outline" iconBg="#EFF6FF" iconColor="#60A5FA" title="Search talent" subtitle="Browse live job seeker profiles by area & role" onPress={() => router.push('/(tabs)/talent')} />
+            <ActionRow icon="business-outline" iconBg="#F8FAFC" iconColor="#475569" title="Company profile" subtitle="Update employer details, location and contact info" onPress={() => router.push('/(tabs)/profile')} />
           </View>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </Pressable>
-
-        <Pressable style={styles.pipelineCard} onPress={() => router.push('/factory/pipeline')}>
-          <Ionicons name="layers-outline" size={22} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.quickTitle}>Open candidate pipeline</Text>
-            <Text style={styles.quickText}>See all applications across your open jobs in one view.</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </Pressable>
-      </SectionCard>
-    </Screen>
-  );
-}
-
-function StatChip({ icon, label, value, color, bg }: {
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  label: string;
-  value: string;
-  color: string;
-  bg: string;
-}) {
-  return (
-    <View style={[chip.wrap, { backgroundColor: bg }]}>
-      <Ionicons name={icon} size={18} color={color} />
-      <Text style={[chip.value, { color }]}>{value}</Text>
-      <Text style={chip.label}>{label}</Text>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
-
-const chip = StyleSheet.create({
-  wrap: { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', gap: 4 },
-  value: { fontSize: 20, fontWeight: '800' },
-  label: { color: colors.textSoft, fontSize: 10, fontWeight: '600', textAlign: 'center' },
-});
-
-const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { color: colors.textInverse, fontSize: 28, fontWeight: '800' },
-  sub: { color: colors.textMuted, marginTop: 4 },
-  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statsRow: { flexDirection: 'row', gap: 8 },
-  quickGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  quickCard: { flex: 1, backgroundColor: '#f8fafc', borderRadius: 22, padding: 16 },
-  quickTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 10 },
-  quickText: { color: colors.textSoft, marginTop: 6, lineHeight: 19, fontSize: 12 },
-  pipelineCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 22,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  profileCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 22,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  nudgeCard: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#bfdbfe',
-  },
-  nudgeTitle: { color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 4 },
-  nudgeText: { color: colors.textSoft, fontSize: 12, lineHeight: 18 },
-});

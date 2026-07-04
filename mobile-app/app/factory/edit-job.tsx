@@ -1,16 +1,59 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { InputField } from '../../components/ui/InputField';
-import { Notice } from '../../components/ui/Notice';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { colors } from '../../constants/colors';
+import { router, useLocalSearchParams } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { getJobDetails, updateJob } from '../../services/jobs';
 import { ApiError } from '../../lib/api';
+
+const BRAND_BLUE = '#1240C7';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
+const SHIFTS = ['Day', 'Night', 'Rotational'];
+
+function Field({
+  label, value, onChangeText, placeholder, icon, multiline, keyboardType,
+}: {
+  label: string; value: string; onChangeText: (v: string) => void;
+  placeholder: string; icon: React.ComponentProps<typeof Ionicons>['name'];
+  multiline?: boolean; keyboardType?: 'default' | 'numeric';
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={{ gap: 6 }}>
+      <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: multiline ? 'flex-start' : 'center', backgroundColor: WHITE, borderRadius: 14, borderWidth: 1.5, borderColor: focused ? BRAND_BLUE : '#E2E8F0', paddingHorizontal: 14, gap: 10, minHeight: multiline ? 100 : 50 }}>
+        <Ionicons name={icon} size={18} color={focused ? BRAND_BLUE : '#94A3B8'} style={{ marginTop: multiline ? 14 : 0 }} />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="#CBD5E1"
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          multiline={multiline}
+          keyboardType={keyboardType ?? 'default'}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          style={{ flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: '#0F172A', paddingVertical: multiline ? 14 : 0 }}
+        />
+      </View>
+    </View>
+  );
+}
+
+function ShiftChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 999, backgroundColor: active ? BRAND_BLUE : WHITE, borderWidth: 1.5, borderColor: active ? BRAND_BLUE : '#E2E8F0' }}
+    >
+      <Text style={{ color: active ? WHITE : '#475569', fontSize: 13, fontFamily: active ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' }}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function EditJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,10 +104,7 @@ export default function EditJobScreen() {
     setMessage('');
     try {
       await updateJob(token, id, {
-        title: title.trim(),
-        description: description.trim(),
-        area: area.trim(),
-        shift: shift.trim(),
+        title: title.trim(), description: description.trim(), area: area.trim(), shift: shift.trim(),
         skillsRequired: skills.split(',').map((s) => s.trim()).filter(Boolean),
         payMin: Number(payMin || 0),
         payMax: Number(payMax || 0),
@@ -77,101 +117,102 @@ export default function EditJobScreen() {
     }
   }
 
+  const isSuccess = message.includes('successfully');
+  const isWarning = message.includes('required') || message.includes('must');
+
   return (
-    <Screen>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={20} color={colors.textInverse} />
-        </Pressable>
-        <View>
-          <Text style={styles.headerTitle}>Edit job</Text>
-          <Text style={styles.headerSub}>Update job details — changes go live immediately</Text>
-        </View>
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
+
+            {/* ── Blue header ── */}
+            <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <Pressable
+                  onPress={() => { Haptics.selectionAsync(); router.back(); }}
+                  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="arrow-back-outline" size={20} color={WHITE} />
+                </Pressable>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: WHITE, fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4 }}>Edit Job</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>Changes go live immediately</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* ── White body ── */}
+            <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 16 }}>
+
+              {loading ? (
+                <View style={{ alignItems: 'center', paddingVertical: 60, gap: 14 }}>
+                  <ActivityIndicator size="large" color={BRAND_BLUE} />
+                  <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium' }}>Loading job details…</Text>
+                </View>
+              ) : loadError ? (
+                <View style={{ alignItems: 'center', paddingVertical: 60, gap: 12 }}>
+                  <Ionicons name="cloud-offline-outline" size={44} color="#94A3B8" />
+                  <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>Unable to load</Text>
+                  <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>{loadError}</Text>
+                </View>
+              ) : (
+                <>
+                  <Field label="Job Title" value={title} onChangeText={setTitle} placeholder="e.g. Production Supervisor" icon="briefcase-outline" />
+                  <Field label="Industrial Area" value={area} onChangeText={setArea} placeholder="e.g. Jeedimetla" icon="location-outline" />
+
+                  <View style={{ gap: 8 }}>
+                    <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.5, textTransform: 'uppercase' }}>Shift</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                      {SHIFTS.map((s) => (
+                        <ShiftChip key={s} label={s} active={shift === s} onPress={() => setShift(shift === s ? '' : s)} />
+                      ))}
+                    </ScrollView>
+                  </View>
+
+                  <Field label="Job Description" value={description} onChangeText={setDescription} placeholder="Describe the role, responsibilities and requirements" icon="document-text-outline" multiline />
+                  <Field label="Skills Required (comma separated)" value={skills} onChangeText={setSkills} placeholder="e.g. Welding, CNC, Quality control" icon="build-outline" />
+
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Field label="Min Pay (₹)" value={payMin} onChangeText={setPayMin} placeholder="15000" icon="cash-outline" keyboardType="numeric" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Field label="Max Pay (₹)" value={payMax} onChangeText={setPayMax} placeholder="25000" icon="cash-outline" keyboardType="numeric" />
+                    </View>
+                  </View>
+
+                  {message ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: isSuccess ? '#F0FDF4' : isWarning ? '#FFF7ED' : '#FEF2F2', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: isSuccess ? '#BBF7D0' : isWarning ? '#FED7AA' : '#FECACA' }}>
+                      <Ionicons name={isSuccess ? 'checkmark-circle' : 'alert-circle'} size={18} color={isSuccess ? '#22C55E' : isWarning ? ORANGE : '#EF4444'} />
+                      <Text style={{ flex: 1, color: isSuccess ? '#15803D' : isWarning ? '#92400E' : '#B91C1C', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>{message}</Text>
+                    </View>
+                  ) : null}
+
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <Pressable
+                      onPress={() => { Haptics.selectionAsync(); router.back(); }}
+                      style={{ flex: 1, height: 54, backgroundColor: '#F1F5F9', borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                      <Text style={{ color: '#475569', fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Discard</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleSave(); }}
+                      disabled={saving}
+                      style={{ flex: 2, height: 54, backgroundColor: saving ? '#93A5E8' : BRAND_BLUE, borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+                    >
+                      {saving ? <ActivityIndicator size="small" color={WHITE} /> : <Ionicons name="save-outline" size={20} color={WHITE} />}
+                      <Text style={{ color: WHITE, fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>{saving ? 'Saving…' : 'Save Changes'}</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+
+              <View style={{ height: 16 }} />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </View>
-
-      {loading ? (
-        <EmptyState icon="hourglass-outline" title="Loading job" message="Fetching current job details…" />
-      ) : loadError ? (
-        <EmptyState icon="cloud-offline-outline" title="Unable to load" message={loadError} />
-      ) : (
-        <SectionCard title="Job details">
-          <InputField icon="briefcase-outline" placeholder="Job title" value={title} onChangeText={setTitle} />
-          <InputField icon="location-outline" placeholder="Industrial area (e.g. Jeedimetla)" value={area} onChangeText={setArea} />
-          <InputField icon="time-outline" placeholder="Shift (e.g. Day / Night / Rotational)" value={shift} onChangeText={setShift} />
-          <InputField
-            icon="document-text-outline"
-            placeholder="Job description (min 10 characters)"
-            value={description}
-            onChangeText={setDescription}
-          />
-          <InputField
-            icon="build-outline"
-            placeholder="Skills required (comma separated)"
-            value={skills}
-            onChangeText={setSkills}
-          />
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <InputField icon="cash-outline" placeholder="Min pay (₹)" value={payMin} onChangeText={setPayMin} keyboardType="numeric" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <InputField icon="cash-outline" placeholder="Max pay (₹)" value={payMax} onChangeText={setPayMax} keyboardType="numeric" />
-            </View>
-          </View>
-
-          <Notice
-            message={message}
-            variant={
-              message.includes('successfully') ? 'success'
-              : message.includes('required') || message.includes('must') ? 'warning'
-              : message ? 'error' : undefined
-            }
-          />
-
-          <View style={styles.btnRow}>
-            <Pressable style={styles.cancelBtn} onPress={() => router.back()}>
-              <Text style={styles.cancelBtnText}>Discard</Text>
-            </Pressable>
-            <Pressable style={styles.submitBtn} onPress={handleSave} disabled={saving}>
-              <Ionicons name="save-outline" size={18} color="#fff" />
-              <Text style={styles.submitText}>{saving ? 'Saving…' : 'Save changes'}</Text>
-            </Pressable>
-          </View>
-        </SectionCard>
-      )}
-    </Screen>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  header: { marginBottom: 4 },
-  headerTitle: { color: colors.textInverse, fontSize: 24, fontWeight: '800' },
-  headerSub: { color: colors.textMuted, marginTop: 4, fontSize: 13 },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 10,
-  },
-  row: { flexDirection: 'row', gap: 10 },
-  btnRow: { flexDirection: 'row', gap: 10 },
-  cancelBtn: {
-    flex: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: '#f1f5f9',
-  },
-  cancelBtnText: { color: colors.text, fontWeight: '800', fontSize: 15 },
-  submitBtn: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    paddingVertical: 14,
-  },
-  submitText: { color: '#fff', fontWeight: '800', fontSize: 15 },
-});

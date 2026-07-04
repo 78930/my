@@ -1,19 +1,31 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { Notice } from '../../components/ui/Notice';
-import { Pill } from '../../components/ui/Pill';
-import { colors } from '../../constants/colors';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 import { Job, JobApplication } from '../../types';
 import { listFactoryJobs } from '../../services/factory';
 import { hireApplication, listJobApplications, shortlistApplication } from '../../services/applications';
 import { ApplicationCard } from '../../components/factory/ApplicationCard';
+
+const BRAND_BLUE = '#1240C7';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
+
+function JobChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: active ? BRAND_BLUE : WHITE, borderWidth: 1.5, borderColor: active ? BRAND_BLUE : '#E2E8F0', maxWidth: 220 }}
+    >
+      <Text style={{ color: active ? WHITE : '#475569', fontSize: 13, fontFamily: active ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' }} numberOfLines={1}>{label}</Text>
+    </Pressable>
+  );
+}
 
 export default function PipelineScreen() {
   const { token, isFactory } = useAuth();
@@ -28,66 +40,41 @@ export default function PipelineScreen() {
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadJobs() {
-      if (!token || !isFactory) {
-        setLoadingJobs(false);
-        setError('Log in as a factory account to access the hiring pipeline.');
-        return;
-      }
-
-      setLoadingJobs(true);
-      setError('');
+      if (!token || !isFactory) { setLoadingJobs(false); setError('Log in as an employer to access the pipeline.'); return; }
+      setLoadingJobs(true); setError('');
       try {
         const data = await listFactoryJobs(token, { status: 'OPEN' });
-        if (!cancelled) {
-          setJobs(data);
-          setSelectedJobId((current) => current || data[0]?.id || '');
-        }
+        if (!cancelled) { setJobs(data); setSelectedJobId((cur) => cur || data[0]?.id || ''); }
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof ApiError ? err.message : 'Unable to load factory jobs');
-        }
+        if (!cancelled) setError(err instanceof ApiError ? err.message : 'Unable to load your jobs');
       } finally {
         if (!cancelled) setLoadingJobs(false);
       }
     }
-
     loadJobs();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, isFactory]);
 
   useEffect(() => {
     let cancelled = false;
-
     async function loadApplications() {
-      if (!token || !selectedJobId || !isFactory) {
-        setApplications([]);
-        return;
-      }
-
+      if (!token || !selectedJobId || !isFactory) { setApplications([]); return; }
       setLoadingApplications(true);
       try {
         const data = await listJobApplications(token, selectedJobId);
         if (!cancelled) setApplications(data);
       } catch (err) {
-        if (!cancelled) {
-          setNotice(err instanceof ApiError ? err.message : 'Unable to load applications');
-        }
+        if (!cancelled) setNotice(err instanceof ApiError ? err.message : 'Unable to load applications');
       } finally {
         if (!cancelled) setLoadingApplications(false);
       }
     }
-
     loadApplications();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, selectedJobId, isFactory]);
 
-  const selectedJob = useMemo(() => jobs.find((job) => job.id === selectedJobId), [jobs, selectedJobId]);
+  const selectedJob = useMemo(() => jobs.find((j) => j.id === selectedJobId), [jobs, selectedJobId]);
 
   async function refreshApplications() {
     if (!token || !selectedJobId) return;
@@ -97,159 +84,180 @@ export default function PipelineScreen() {
 
   async function handleShortlist(applicationId: string) {
     if (!token) return;
-    setBusyApplicationId(applicationId);
-    setNotice('');
-    try {
-      await shortlistApplication(token, applicationId);
-      await refreshApplications();
-      setNotice('Candidate shortlisted.');
-    } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : 'Unable to shortlist candidate');
-    } finally {
-      setBusyApplicationId('');
-    }
+    setBusyApplicationId(applicationId); setNotice('');
+    try { await shortlistApplication(token, applicationId); await refreshApplications(); setNotice('Candidate shortlisted.'); }
+    catch (err) { setNotice(err instanceof ApiError ? err.message : 'Unable to shortlist candidate'); }
+    finally { setBusyApplicationId(''); }
   }
 
   async function handleHire(applicationId: string, payload: { proposedPay: number; joiningDate?: string }) {
     if (!token) return;
-    setBusyApplicationId(applicationId);
-    setNotice('');
-    try {
-      await hireApplication(token, applicationId, payload);
-      await refreshApplications();
-      setNotice('Candidate moved to hired.');
-    } catch (err) {
-      setNotice(err instanceof ApiError ? err.message : 'Unable to complete hire');
-    } finally {
-      setBusyApplicationId('');
-    }
+    setBusyApplicationId(applicationId); setNotice('');
+    try { await hireApplication(token, applicationId, payload); await refreshApplications(); setNotice('Candidate moved to hired.'); }
+    catch (err) { setNotice(err instanceof ApiError ? err.message : 'Unable to complete hire'); }
+    finally { setBusyApplicationId(''); }
   }
 
+  const applied = applications.filter((a) => a.status === 'APPLIED').length;
+  const shortlisted = applications.filter((a) => a.status === 'SHORTLISTED').length;
+  const hired = applications.filter((a) => a.status === 'HIRED').length;
+  const isNoticeSuccess = notice.includes('shortlisted') || notice.includes('hired');
+
   return (
-    <Screen>
-      <SectionCard
-        title="Candidate pipeline"
-        subtitle="Shortlist and hire workers against your live job posts"
-      >
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back-outline" size={18} color={colors.textInverse} />
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-          <Pressable style={styles.refreshButton} onPress={() => refreshApplications()}>
-            <Ionicons name="refresh-outline" size={18} color={colors.primary} />
-            <Text style={styles.refreshText}>Refresh</Text>
-          </Pressable>
-        </View>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
 
-        <Notice
-          message={notice}
-          variant={notice.includes('shortlisted') || notice.includes('hired') ? 'success' : 'error'}
-        />
-
-        <Text style={styles.label}>Select job</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
-          {jobs.map((job) => (
-            <Pill
-              key={job.id}
-              label={`${job.role} • ${job.area}`}
-              active={selectedJobId === job.id}
-              onPress={() => setSelectedJobId(job.id)}
-            />
-          ))}
-        </ScrollView>
-
-        {selectedJob ? (
-          <View style={styles.jobSummary}>
-            <Text style={styles.jobTitle}>{selectedJob.role}</Text>
-            <Text style={styles.jobMeta}>{selectedJob.company} • {selectedJob.area} • {selectedJob.shift}</Text>
-            <Text style={styles.jobMeta}>{selectedJob.pay} • {selectedJob.skills.slice(0, 4).join(', ') || 'Skills not specified'}</Text>
-          </View>
-        ) : null}
-      </SectionCard>
-
-      {loadingJobs ? <EmptyState icon="hourglass-outline" title="Loading jobs" message="Fetching your factory job posts." /> : null}
-      {!loadingJobs && error ? <EmptyState icon="cloud-offline-outline" title="Pipeline unavailable" message={error} /> : null}
-      {!loadingJobs && !error && !jobs.length ? (
-        <EmptyState icon="briefcase-outline" title="No factory jobs yet" message="Post a job in the Factory tab to start building your candidate pipeline." />
-      ) : null}
-      {!loadingJobs && !error && jobs.length && loadingApplications ? (
-        <EmptyState icon="hourglass-outline" title="Loading applications" message="Fetching candidates for the selected job." />
-      ) : null}
-      {!loadingJobs && !error && jobs.length && !loadingApplications && !applications.length ? (
-        <EmptyState icon="people-outline" title="No applicants yet" message="Share the job and wait for worker applications to appear here." />
-      ) : null}
-      {!loadingJobs && !error && !loadingApplications
-        ? applications.map((item) => (
-            <View key={item.id}>
-              <ApplicationCard
-                item={item}
-                busy={busyApplicationId === item.id}
-                onShortlist={handleShortlist}
-                onHire={handleHire}
-              />
+          {/* ── Blue header ── */}
+          <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 }}>
               <Pressable
-                style={styles.viewDetailsBtn}
-                onPress={() =>
-                  router.push(
-                    `/factory/application/${item.id}?jobId=${selectedJobId}` as never
-                  )
-                }
+                onPress={() => { Haptics.selectionAsync(); router.back(); }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
               >
-                <Ionicons name="expand-outline" size={13} color={colors.primary} />
-                <Text style={styles.viewDetailsBtnText}>View full profile & reject</Text>
+                <Ionicons name="arrow-back-outline" size={20} color={WHITE} />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: WHITE, fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4 }}>Pipeline</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>Shortlist and hire job seekers</Text>
+              </View>
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); refreshApplications(); }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="refresh-outline" size={20} color={WHITE} />
               </Pressable>
             </View>
-          ))
-        : null}
-    </Screen>
+
+            {/* Pipeline stats */}
+            {!loadingJobs && !error && applications.length > 0 ? (
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(147,197,253,0.20)', borderRadius: 14, padding: 12, alignItems: 'center', gap: 4 }}>
+                  <Text style={{ color: '#93C5FD', fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{applied}</Text>
+                  <Text style={{ color: '#93C5FD', fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>Applied</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: 'rgba(255,140,0,0.20)', borderRadius: 14, padding: 12, alignItems: 'center', gap: 4 }}>
+                  <Text style={{ color: ORANGE, fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{shortlisted}</Text>
+                  <Text style={{ color: ORANGE, fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>Shortlisted</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: 'rgba(52,211,153,0.20)', borderRadius: 14, padding: 12, alignItems: 'center', gap: 4 }}>
+                  <Text style={{ color: '#34D399', fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{hired}</Text>
+                  <Text style={{ color: '#34D399', fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>Hired</Text>
+                </View>
+              </View>
+            ) : null}
+          </View>
+
+          {/* ── White body ── */}
+          <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 14 }}>
+
+            {/* Notice */}
+            {notice ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: isNoticeSuccess ? '#F0FDF4' : '#FEF2F2', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: isNoticeSuccess ? '#BBF7D0' : '#FECACA' }}>
+                <Ionicons name={isNoticeSuccess ? 'checkmark-circle' : 'alert-circle'} size={18} color={isNoticeSuccess ? '#22C55E' : '#EF4444'} />
+                <Text style={{ flex: 1, color: isNoticeSuccess ? '#15803D' : '#B91C1C', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>{notice}</Text>
+              </View>
+            ) : null}
+
+            {loadingJobs ? (
+              <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
+                <ActivityIndicator size="large" color={BRAND_BLUE} />
+                <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium' }}>Loading your jobs…</Text>
+              </View>
+            ) : error ? (
+              <View style={{ alignItems: 'center', paddingVertical: 48, gap: 10 }}>
+                <Ionicons name="cloud-offline-outline" size={44} color="#94A3B8" />
+                <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>Pipeline unavailable</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>{error}</Text>
+              </View>
+            ) : !jobs.length ? (
+              <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
+                <Ionicons name="briefcase-outline" size={44} color="#94A3B8" />
+                <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>No jobs yet</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>Post a job to start building your candidate pipeline.</Text>
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/factory/post-job' as never); }}
+                  style={{ height: 50, backgroundColor: BRAND_BLUE, borderRadius: 16, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Text style={{ color: WHITE, fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Post a Job</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                {/* Job selector */}
+                <View style={{ gap: 8 }}>
+                  <Text style={{ color: '#475569', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' }}>Select Job</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {jobs.map((job) => (
+                      <JobChip key={job.id} label={`${job.role} • ${job.area}`} active={selectedJobId === job.id} onPress={() => setSelectedJobId(job.id)} />
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Selected job summary */}
+                {selectedJob ? (
+                  <View style={{ backgroundColor: WHITE, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#BFDBFE', gap: 6 }}>
+                    <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>{selectedJob.role}</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                      {selectedJob.area ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Ionicons name="location-outline" size={13} color="#64748B" />
+                          <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{selectedJob.area}</Text>
+                        </View>
+                      ) : null}
+                      {selectedJob.shift ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Ionicons name="time-outline" size={13} color="#64748B" />
+                          <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{selectedJob.shift}</Text>
+                        </View>
+                      ) : null}
+                      {selectedJob.pay ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Ionicons name="cash-outline" size={13} color="#64748B" />
+                          <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{selectedJob.pay}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                ) : null}
+
+                {loadingApplications ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 32, gap: 10 }}>
+                    <ActivityIndicator size="small" color={BRAND_BLUE} />
+                    <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>Fetching candidates…</Text>
+                  </View>
+                ) : !applications.length ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 40, gap: 10 }}>
+                    <Ionicons name="people-outline" size={44} color="#94A3B8" />
+                    <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>No applicants yet</Text>
+                    <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>Share the job and wait for job seekers to apply.</Text>
+                  </View>
+                ) : (
+                  applications.map((item) => (
+                    <View key={item.id} style={{ gap: 6 }}>
+                      <ApplicationCard
+                        item={item}
+                        busy={busyApplicationId === item.id}
+                        onShortlist={handleShortlist}
+                        onHire={handleHire}
+                      />
+                      <Pressable
+                        onPress={() => { Haptics.selectionAsync(); router.push(`/factory/application/${item.id}?jobId=${selectedJobId}` as never); }}
+                        style={{ height: 36, backgroundColor: '#F1F5F9', borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      >
+                        <Ionicons name="expand-outline" size={14} color="#475569" />
+                        <Text style={{ color: '#475569', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>View full profile & reject</Text>
+                      </Pressable>
+                    </View>
+                  ))
+                )}
+              </>
+            )}
+
+            <View style={{ height: 24 }} />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  backButton: {
-    backgroundColor: colors.panel,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-  },
-  backText: { color: colors.textInverse, fontWeight: '800' },
-  refreshButton: {
-    backgroundColor: colors.primarySoft,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-  },
-  refreshText: { color: colors.primary, fontWeight: '800' },
-  viewDetailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: -4,
-    marginBottom: 4,
-    paddingVertical: 8,
-    backgroundColor: colors.primarySoft,
-    borderRadius: 14,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-  },
-  viewDetailsBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
-  label: { color: colors.text, fontWeight: '700' },
-  row: { gap: 8 },
-  jobSummary: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 18,
-    padding: 14,
-    gap: 6,
-  },
-  jobTitle: { color: colors.text, fontWeight: '800', fontSize: 16 },
-  jobMeta: { color: colors.textSoft, lineHeight: 20, fontSize: 12 },
-});

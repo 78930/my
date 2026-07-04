@@ -1,13 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { InputField } from '../../components/ui/InputField';
-import { Pill } from '../../components/ui/Pill';
-import { colors } from '../../constants/colors';
+import { Card } from '../../components/ui/Card';
+import { Text } from '../../components/ui/Text';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Chip } from '../../components/ui/Chip';
+import { Avatar } from '../../components/ui/Avatar';
+import { IconButton } from '../../components/ui/IconButton';
+import { Spacer } from '../../components/ui/Spacer';
+import { useTheme } from '../../theme/ThemeContext';
 import { industrialAreas } from '../../constants/areas';
 import { allRoles } from '../../constants/roles';
 import { useAuth } from '../../context/AuthContext';
@@ -17,10 +22,7 @@ import { getFactoryProfile, updateFactoryProfile } from '../../services/factory'
 import { getWorkerProfile, updateWorkerProfile } from '../../services/workers';
 
 function parseCommaList(value: string) {
-  return value
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
 function toggleArrayItem(items: string[], value: string) {
@@ -30,9 +32,11 @@ function toggleArrayItem(items: string[], value: string) {
 export default function ProfileTab() {
   const { t, i18n } = useTranslation();
   const { token, user, isFactory, isWorker, refreshSession, signOut } = useAuth();
+  const { colors, spacing, radii } = useTheme();
   const currentLanguage = supportedLanguages.includes(i18n.language as (typeof supportedLanguages)[number])
     ? (i18n.language as (typeof supportedLanguages)[number])
     : 'en';
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -69,11 +73,7 @@ export default function ProfileTab() {
     let cancelled = false;
 
     async function loadProfile() {
-      if (!token || !user) {
-        setLoading(false);
-        return;
-      }
-
+      if (!token || !user) { setLoading(false); return; }
       setLoading(true);
       setError('');
       setMessage('');
@@ -104,17 +104,14 @@ export default function ProfileTab() {
         }
       } catch (err) {
         if (cancelled) return;
-        const nextMessage = err instanceof ApiError ? err.message : 'Unable to load profile';
-        setError(nextMessage);
+        setError(err instanceof ApiError ? err.message : 'Unable to load profile');
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
     loadProfile();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [token, user, isWorker, isFactory]);
 
   async function handleSaveWorker() {
@@ -137,10 +134,9 @@ export default function ProfileTab() {
         isOpenToWork,
       });
       await refreshSession();
-      setMessage('Worker profile updated successfully.');
+      setMessage('Profile updated successfully.');
     } catch (err) {
-      const nextMessage = err instanceof ApiError ? err.message : 'Unable to update worker profile';
-      setError(nextMessage);
+      setError(err instanceof ApiError ? err.message : 'Unable to update profile');
     } finally {
       setSaving(false);
     }
@@ -160,10 +156,9 @@ export default function ProfileTab() {
         industrialAreas: industrialAreaSelection,
       });
       await refreshSession();
-      setMessage('Factory profile updated successfully.');
+      setMessage('Profile updated successfully.');
     } catch (err) {
-      const nextMessage = err instanceof ApiError ? err.message : 'Unable to update factory profile';
-      setError(nextMessage);
+      setError(err instanceof ApiError ? err.message : 'Unable to update profile');
     } finally {
       setSaving(false);
     }
@@ -177,425 +172,280 @@ export default function ProfileTab() {
   if (!user || !token) {
     return (
       <Screen>
-        <SectionCard title="Profile" subtitle="Sign in to edit worker or factory details.">
-          <View style={styles.emptyState}>
+        <Card>
+          <View style={{ alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md }}>
             <Ionicons name="person-circle-outline" size={46} color={colors.primary} />
-            <Text style={styles.emptyTitle}>No active session</Text>
-            <Text style={styles.emptyText}>Log in first to manage skills, industrial areas, hiring details, and profile settings.</Text>
-            <Pressable style={styles.primaryButton} onPress={() => router.replace('/auth/welcome')}>
-              <Text style={styles.primaryButtonText}>Go to login</Text>
-            </Pressable>
+            <Text variant="h3">No active session</Text>
+            <Text variant="body" color="secondary" align="center">Log in first to manage skills, industrial areas, hiring details, and profile settings.</Text>
+            <Button label="Go to login" onPress={() => router.replace('/auth/welcome')} variant="primary" />
           </View>
-        </SectionCard>
+        </Card>
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <SectionCard
-        title={isWorker ? 'Worker profile' : 'Factory profile'}
-        subtitle={
-          isWorker
-            ? 'Edit your headline, skills, salary preference, roles and industrial areas.'
-            : 'Edit company details, HR contact and target industrial areas.'
-        }
-      >
-        <View style={styles.headerRow}>
-          <View style={styles.profileBadge}>
-            <Ionicons name={isWorker ? 'person-outline' : 'business-outline'} size={20} color={colors.textInverse} />
-          </View>
+      {/* Header card */}
+      <Card>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+          <Avatar name={user.name || 'U'} size="md" />
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>{user.name}</Text>
-            <Text style={styles.headerSubtitle}>{user.phone || user.email || 'No contact info'}</Text>
+            <Text variant="bodyLg">{user.name}</Text>
+            <Text variant="caption" color="secondary">{user.phone || user.email || 'No contact info'}</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Pressable style={styles.settingsButton} onPress={() => router.push('/settings')}>
-              <Ionicons name="settings-outline" size={16} color={colors.textMuted} />
-            </Pressable>
-            <Pressable style={styles.logoutButton} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={16} color={colors.textInverse} />
-              <Text style={styles.logoutText}>Logout</Text>
-            </Pressable>
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <IconButton icon="settings-outline" onPress={() => router.push('/settings')} variant="default" accessibilityLabel="Settings" />
+            <Button label="Logout" leftIcon="log-out-outline" onPress={handleLogout} variant="ghost" size="sm" />
           </View>
         </View>
 
-        {loading ? <Text style={styles.helperText}>Loading profile...</Text> : null}
-        {message ? <Text style={styles.successText}>{message}</Text> : null}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-      </SectionCard>
+        {loading ? (
+          <>
+            <Spacer size="sm" />
+            <Text variant="caption" color="secondary">Loading profile…</Text>
+          </>
+        ) : null}
+        {message ? (
+          <>
+            <Spacer size="sm" />
+            <Text variant="label" color="success">{message}</Text>
+          </>
+        ) : null}
+        {error ? (
+          <>
+            <Spacer size="sm" />
+            <Text variant="label" color="error">{error}</Text>
+          </>
+        ) : null}
+      </Card>
 
-      <SectionCard
-        title={t('settings.languagePreference')}
-        subtitle={t('settings.currentLanguage', { language: languageLabels[currentLanguage] })}
-      >
-        <Pressable style={styles.softButton} onPress={() => router.push('/settings')}>
-          <Text style={styles.softButtonText}>{t('settings.changeLanguage')}</Text>
-        </Pressable>
-      </SectionCard>
+      {/* Language */}
+      <Card>
+        <Text variant="h3">{t('settings.languagePreference')}</Text>
+        <Spacer size="xs" />
+        <Text variant="caption" color="secondary">{t('settings.currentLanguage', { language: languageLabels[currentLanguage] })}</Text>
+        <Spacer size="md" />
+        <Button label={t('settings.changeLanguage')} onPress={() => router.push('/settings')} variant="secondary" size="sm" />
+      </Card>
 
       {isWorker ? (
         <>
-          <SectionCard title="Basic details" subtitle="">
-            <InputField icon="person-outline" placeholder="Full name" value={fullName} onChangeText={setFullName} />
-            <InputField icon="megaphone-outline" placeholder="Headline" value={headline} onChangeText={setHeadline} />
-            <InputField
-              icon="time-outline"
-              placeholder="Experience in years"
-              value={experienceYears}
-              onChangeText={setExperienceYears}
-            />
-            <InputField icon="cash-outline" placeholder="Minimum salary" value={salaryMin} onChangeText={setSalaryMin} />
-            <InputField
-              icon="checkmark-done-outline"
-              placeholder="Availability (Immediate / 15 Days / 30 Days)"
-              value={availability}
-              onChangeText={setAvailability}
-            />
-          </SectionCard>
+          {/* Basic details */}
+          <Card>
+            <Text variant="h3">Basic details</Text>
+            <Spacer size="md" />
+            <Input label="Full name" value={fullName} onChangeText={setFullName} placeholder="Your full name" leftIcon="person-outline" />
+            <Spacer size="md" />
+            <Input label="Headline" value={headline} onChangeText={setHeadline} placeholder="Brief professional headline" leftIcon="megaphone-outline" />
+            <Spacer size="md" />
+            <Input label="Experience (years)" value={experienceYears} onChangeText={setExperienceYears} placeholder="e.g. 3" leftIcon="time-outline" keyboardType="numeric" />
+            <Spacer size="md" />
+            <Input label="Minimum salary (₹)" value={salaryMin} onChangeText={setSalaryMin} placeholder="e.g. 15000" leftIcon="cash-outline" keyboardType="numeric" />
+            <Spacer size="md" />
+            <Input label="Availability" value={availability} onChangeText={setAvailability} placeholder="Immediate / 15 Days / 30 Days" leftIcon="checkmark-done-outline" />
+          </Card>
 
-          <SectionCard title="Areas and roles" subtitle="Tap to select, or choose Others to add your own">
-            <Text style={styles.label}>Preferred industrial areas</Text>
-            <View style={styles.pillsWrap}>
+          {/* Areas and roles */}
+          <Card>
+            <Text variant="h3">Areas and roles</Text>
+            <Text variant="caption" color="secondary">Tap to select, or add your own</Text>
+
+            <Spacer size="md" />
+            <Text variant="label" color="secondary">Preferred industrial areas</Text>
+            <Spacer size="sm" />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
               {[...industrialAreas, ...preferredAreas.filter((a) => !industrialAreas.includes(a))].map((area) => (
-                <Pill
+                <Chip
                   key={area}
                   label={area}
                   active={preferredAreas.includes(area)}
                   onPress={() => setPreferredAreas((items) => toggleArrayItem(items, area))}
                 />
               ))}
-              <Pill
-                label="+ Others"
-                active={showCustomArea}
-                onPress={() => setShowCustomArea((v) => !v)}
-              />
+              <Chip label="+ Others" active={showCustomArea} onPress={() => setShowCustomArea((v) => !v)} />
             </View>
             {showCustomArea ? (
-              <View style={styles.customRow}>
-                <TextInput
-                  style={styles.customInput}
-                  placeholder="Type area name..."
-                  placeholderTextColor="#94a3b8"
-                  value={customAreaText}
-                  onChangeText={setCustomAreaText}
-                />
-                <Pressable
-                  style={styles.addBtn}
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-end' }}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Custom area"
+                    value={customAreaText}
+                    onChangeText={setCustomAreaText}
+                    placeholder="Type area name…"
+                  />
+                </View>
+                <Button
+                  label="Add"
                   onPress={() => {
                     const val = customAreaText.trim();
-                    if (val && !preferredAreas.includes(val)) {
-                      setPreferredAreas((items) => [...items, val]);
-                    }
+                    if (val && !preferredAreas.includes(val)) setPreferredAreas((items) => [...items, val]);
                     setCustomAreaText('');
                     setShowCustomArea(false);
                   }}
-                >
-                  <Text style={styles.addBtnText}>Add</Text>
-                </Pressable>
+                  variant="primary"
+                  size="sm"
+                />
               </View>
             ) : null}
 
-            <Text style={styles.label}>Preferred roles</Text>
-            <View style={styles.pillsWrap}>
+            <Spacer size="lg" />
+            <Text variant="label" color="secondary">Preferred roles</Text>
+            <Spacer size="sm" />
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
               {[...suggestedRoles, ...preferredRoles.filter((r) => !suggestedRoles.includes(r))].map((role) => (
-                <Pill
+                <Chip
                   key={role}
                   label={role}
                   active={preferredRoles.includes(role)}
                   onPress={() => setPreferredRoles((items) => toggleArrayItem(items, role))}
                 />
               ))}
-              <Pill
-                label="+ Others"
-                active={showCustomRole}
-                onPress={() => setShowCustomRole((v) => !v)}
-              />
+              <Chip label="+ Others" active={showCustomRole} onPress={() => setShowCustomRole((v) => !v)} />
             </View>
             {showCustomRole ? (
-              <View style={styles.customRow}>
-                <TextInput
-                  style={styles.customInput}
-                  placeholder="Type role or job title..."
-                  placeholderTextColor="#94a3b8"
-                  value={customRoleText}
-                  onChangeText={setCustomRoleText}
-                />
-                <Pressable
-                  style={styles.addBtn}
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-end' }}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Custom role"
+                    value={customRoleText}
+                    onChangeText={setCustomRoleText}
+                    placeholder="Type role or job title…"
+                  />
+                </View>
+                <Button
+                  label="Add"
                   onPress={() => {
                     const val = customRoleText.trim();
-                    if (val && !preferredRoles.includes(val)) {
-                      setPreferredRoles((items) => [...items, val]);
-                    }
+                    if (val && !preferredRoles.includes(val)) setPreferredRoles((items) => [...items, val]);
                     setCustomRoleText('');
                     setShowCustomRole(false);
                   }}
-                >
-                  <Text style={styles.addBtnText}>Add</Text>
-                </Pressable>
+                  variant="primary"
+                  size="sm"
+                />
               </View>
             ) : null}
 
-            <InputField
-              icon="swap-horizontal-outline"
-              placeholder="Preferred shifts comma separated"
+            <Spacer size="lg" />
+            <Input
+              label="Preferred shifts (comma separated)"
               value={preferredShiftsText}
               onChangeText={setPreferredShiftsText}
+              placeholder="e.g. General, Rotational"
+              leftIcon="swap-horizontal-outline"
             />
-          </SectionCard>
+          </Card>
 
-          <SectionCard title="Skills and certifications" subtitle="Enter comma-separated values for quick editing">
-            <InputField icon="build-outline" placeholder="Skills" value={skillsText} onChangeText={setSkillsText} />
-            <InputField
-              icon="ribbon-outline"
-              placeholder="Certifications"
-              value={certificationsText}
-              onChangeText={setCertificationsText}
+          {/* Skills and certifications */}
+          <Card>
+            <Text variant="h3">Skills and certifications</Text>
+            <Spacer size="md" />
+            <Input label="Skills (comma separated)" value={skillsText} onChangeText={setSkillsText} placeholder="e.g. Welding, CNC, QC" leftIcon="build-outline" />
+            <Spacer size="md" />
+            <Input label="Certifications (comma separated)" value={certificationsText} onChangeText={setCertificationsText} placeholder="e.g. ITI Fitter, ISO Certified" leftIcon="ribbon-outline" />
+            <Spacer size="md" />
+
+            {/* Open to work toggle */}
+            <Card pressable onPress={() => setIsOpenToWork((v) => !v)} padding={spacing.lg}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                <View style={{ width: 40, height: 40, borderRadius: radii.md, backgroundColor: isOpenToWork ? colors.successSoft : colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: isOpenToWork ? colors.success : colors.border }}>
+                  <Ionicons name={isOpenToWork ? 'checkmark-circle' : 'close-circle-outline'} size={20} color={isOpenToWork ? colors.success : colors.textTertiary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyLg">{isOpenToWork ? 'Open to work' : 'Not open to work'}</Text>
+                  <Text variant="caption" color="secondary">{isOpenToWork ? 'Employers can find and contact you' : 'Your profile is hidden from employer searches'}</Text>
+                </View>
+              </View>
+            </Card>
+
+            <Spacer size="lg" />
+            <Button
+              label={saving ? 'Saving…' : 'Save profile'}
+              onPress={handleSaveWorker}
+              variant="primary"
+              fullWidth
+              loading={saving}
+              disabled={loading}
             />
-            <Pressable
-              style={[styles.toggleButton, isOpenToWork ? styles.toggleButtonActive : undefined]}
-              onPress={() => setIsOpenToWork((value) => !value)}
-            >
-              <Ionicons
-                name={isOpenToWork ? 'checkmark-circle' : 'close-circle-outline'}
-                size={18}
-                color={isOpenToWork ? colors.success : colors.textSoft}
-              />
-              <Text style={styles.toggleButtonText}>{isOpenToWork ? 'Open to work' : 'Not open to work'}</Text>
-            </Pressable>
-            <Pressable style={styles.primaryButton} onPress={handleSaveWorker} disabled={saving || loading}>
-              <Text style={styles.primaryButtonText}>{saving ? 'Saving...' : 'Save worker profile'}</Text>
-            </Pressable>
-          </SectionCard>
+          </Card>
         </>
       ) : null}
 
       {isFactory ? (
         <>
-          <SectionCard title="Company details" subtitle="Edit your company name, HR contact, size and description.">
-            <InputField icon="business-outline" placeholder="Company name" value={companyName} onChangeText={setCompanyName} />
-            <InputField icon="people-outline" placeholder="HR / contact person" value={hrName} onChangeText={setHrName} />
-            <InputField icon="grid-outline" placeholder="Company size" value={companySize} onChangeText={setCompanySize} />
-            <InputField
-              icon="document-text-outline"
-              placeholder="Company description"
-              value={description}
-              onChangeText={setDescription}
-            />
-          </SectionCard>
+          {/* Company details */}
+          <Card>
+            <Text variant="h3">Company details</Text>
+            <Spacer size="md" />
+            <Input label="Company name" value={companyName} onChangeText={setCompanyName} placeholder="Your company name" leftIcon="business-outline" />
+            <Spacer size="md" />
+            <Input label="HR / contact person" value={hrName} onChangeText={setHrName} placeholder="Name of HR or contact" leftIcon="people-outline" />
+            <Spacer size="md" />
+            <Input label="Company size" value={companySize} onChangeText={setCompanySize} placeholder="e.g. 50-200 employees" leftIcon="grid-outline" />
+            <Spacer size="md" />
+            <Input label="Company description" value={description} onChangeText={setDescription} placeholder="Brief description of your company" leftIcon="document-text-outline" multiline />
+          </Card>
 
-          <SectionCard title="Industrial coverage" subtitle="Select the areas where your factory hires workers">
-            <View style={styles.pillsWrap}>
+          {/* Industrial coverage */}
+          <Card>
+            <Text variant="h3">Industrial coverage</Text>
+            <Text variant="caption" color="secondary">Select the areas where you hire job seekers</Text>
+            <Spacer size="md" />
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
               {[...industrialAreas, ...industrialAreaSelection.filter((a) => !industrialAreas.includes(a))].map((area) => (
-                <Pill
+                <Chip
                   key={area}
                   label={area}
                   active={industrialAreaSelection.includes(area)}
                   onPress={() => setIndustrialAreaSelection((items) => toggleArrayItem(items, area))}
                 />
               ))}
-              <Pill
-                label="+ Others"
-                active={showCustomFactoryArea}
-                onPress={() => setShowCustomFactoryArea((v) => !v)}
-              />
+              <Chip label="+ Others" active={showCustomFactoryArea} onPress={() => setShowCustomFactoryArea((v) => !v)} />
             </View>
+
             {showCustomFactoryArea ? (
-              <View style={styles.customRow}>
-                <TextInput
-                  style={styles.customInput}
-                  placeholder="Type area name..."
-                  placeholderTextColor="#94a3b8"
-                  value={customFactoryAreaText}
-                  onChangeText={setCustomFactoryAreaText}
-                />
-                <Pressable
-                  style={styles.addBtn}
+              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, alignItems: 'flex-end' }}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Custom area"
+                    value={customFactoryAreaText}
+                    onChangeText={setCustomFactoryAreaText}
+                    placeholder="Type area name…"
+                  />
+                </View>
+                <Button
+                  label="Add"
                   onPress={() => {
                     const val = customFactoryAreaText.trim();
-                    if (val && !industrialAreaSelection.includes(val)) {
-                      setIndustrialAreaSelection((items) => [...items, val]);
-                    }
+                    if (val && !industrialAreaSelection.includes(val)) setIndustrialAreaSelection((items) => [...items, val]);
                     setCustomFactoryAreaText('');
                     setShowCustomFactoryArea(false);
                   }}
-                >
-                  <Text style={styles.addBtnText}>Add</Text>
-                </Pressable>
+                  variant="primary"
+                  size="sm"
+                />
               </View>
             ) : null}
-            <View style={styles.quickActions}>
-              <Pressable style={styles.softButton} onPress={() => setIndustrialAreaSelection(industrialAreas)}>
-                <Text style={styles.softButtonText}>Select all</Text>
-              </Pressable>
-              <Pressable style={styles.softButton} onPress={() => setIndustrialAreaSelection([])}>
-                <Text style={styles.softButtonText}>Clear</Text>
-              </Pressable>
+
+            <Spacer size="lg" />
+            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+              <Button label="Select all" onPress={() => setIndustrialAreaSelection(industrialAreas)} variant="secondary" style={{ flex: 1 }} size="sm" />
+              <Button label="Clear" onPress={() => setIndustrialAreaSelection([])} variant="ghost" style={{ flex: 1 }} size="sm" />
             </View>
-            <Pressable style={styles.primaryButton} onPress={handleSaveFactory} disabled={saving || loading}>
-              <Text style={styles.primaryButtonText}>{saving ? 'Saving...' : 'Save factory profile'}</Text>
-            </Pressable>
-          </SectionCard>
+            <Spacer size="md" />
+            <Button
+              label={saving ? 'Saving…' : 'Save profile'}
+              onPress={handleSaveFactory}
+              variant="primary"
+              fullWidth
+              loading={saving}
+              disabled={loading}
+            />
+          </Card>
         </>
       ) : null}
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  emptyState: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  emptyText: {
-    color: colors.textSoft,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  profileBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    color: colors.text,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  headerSubtitle: {
-    color: colors.textSoft,
-    marginTop: 4,
-  },
-  helperText: {
-    color: colors.textSoft,
-  },
-  successText: {
-    color: colors.success,
-    lineHeight: 20,
-  },
-  errorText: {
-    color: '#b91c1c',
-    lineHeight: 20,
-  },
-  label: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  pillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  toggleButton: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#f8fafc',
-  },
-  toggleButtonActive: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#86efac',
-  },
-  toggleButtonText: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  primaryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    color: colors.textInverse,
-    fontWeight: '800',
-    fontSize: 14,
-  },
-  settingsButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.panel,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutButton: {
-    backgroundColor: colors.panel,
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    gap: 6,
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: colors.textInverse,
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  quickActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  softButton: {
-    flex: 1,
-    backgroundColor: colors.primarySoft,
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  softButtonText: {
-    color: colors.primary,
-    fontWeight: '800',
-  },
-  customRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  customInput: {
-    flex: 1,
-    backgroundColor: '#f8fafc',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.text,
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  addBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  addBtnText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 14,
-  },
-});

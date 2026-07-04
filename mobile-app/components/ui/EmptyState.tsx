@@ -1,53 +1,64 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
+import { Text } from './Text';
+import { Button } from './Button';
 
-type Props = {
-  title: string;
-  message: string;
+export interface EmptyStateProps {
   icon?: React.ComponentProps<typeof Ionicons>['name'];
-};
+  title: string;
+  message?: string;
+  action?: { label: string; onPress: () => void };
+}
 
-export function EmptyState({ title, message, icon = 'search-outline' }: Props) {
+export function EmptyState({
+  icon = 'search-outline',
+  title,
+  message,
+  action,
+}: EmptyStateProps) {
+  const { colors, spacing, radii } = useTheme();
+
   return (
-    <View style={styles.wrap}>
-      <View style={styles.iconWrap}>
+    <View
+      style={{
+        alignItems: 'center',
+        padding: spacing['2xl'],
+        gap: spacing.md,
+      }}
+    >
+      <View
+        style={{
+          width: 64,
+          height: 64,
+          borderRadius: radii.lg,
+          backgroundColor: colors.primarySoft,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Ionicons name={icon} size={28} color={colors.primary} />
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
+
+      <Text variant="h3" align="center">
+        {title}
+      </Text>
+
+      {message ? (
+        <Text variant="body" color="secondary" align="center">
+          {message}
+        </Text>
+      ) : null}
+
+      {action ? (
+        <Button
+          label={action.label}
+          onPress={action.onPress}
+          variant="secondary"
+          style={{ marginTop: spacing.sm }}
+        />
+      ) : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: colors.primarySoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.text,
-    textAlign: 'center',
-  },
-  message: {
-    color: colors.textSoft,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontSize: 13,
-  },
-});

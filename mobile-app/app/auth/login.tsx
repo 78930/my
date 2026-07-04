@@ -1,12 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { InputField } from '../../components/ui/InputField';
-import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { colors } from '../../constants/colors';
+import { Card } from '../../components/ui/Card';
+import { Text } from '../../components/ui/Text';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Spacer } from '../../components/ui/Spacer';
+import { LanguageSelector } from '../../components/ui/LanguageSelector';
 import { UserType } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
@@ -27,7 +29,6 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     setError('');
-
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
 
@@ -35,7 +36,6 @@ export default function LoginScreen() {
       setError(t('auth.nameRequired'));
       return;
     }
-
     if (trimmedPhone.replace(/\D/g, '').length < 10) {
       setError(t('auth.phoneRequired'));
       return;
@@ -55,96 +55,76 @@ export default function LoginScreen() {
     }
   }
 
+  const typeLabel = type === 'factory' ? t('userType.factory') : t('userType.worker');
+
   return (
     <Screen>
       <LanguageSelector compact />
-      <SectionCard
-        title={t('auth.loginAs', {
-          type: type === 'factory' ? t('userType.factory') : t('userType.worker'),
-        })}
-        subtitle={t('auth.loginSubtitle')}
-      >
-        <InputField
-          icon="person-outline"
+
+      <Card>
+        <Text variant="h2">
+          {t('auth.loginAs', { type: typeLabel })}
+        </Text>
+        <Spacer size="xs" />
+        <Text variant="body" color="secondary">
+          {t('auth.loginSubtitle')}
+        </Text>
+        <Spacer size="lg" />
+
+        <Input
+          label={t('auth.namePlaceholder')}
           placeholder={t('auth.namePlaceholder')}
           value={name}
           onChangeText={setName}
+          leftIcon="person-outline"
+          autoCapitalize="words"
         />
-
-        <InputField
-          icon="call-outline"
+        <Spacer size="md" />
+        <Input
+          label={t('auth.phonePlaceholder')}
           placeholder={t('auth.phonePlaceholder')}
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
+          leftIcon="call-outline"
+          autoCapitalize="none"
         />
 
         {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <>
+            <Spacer size="md" />
+            <Text variant="label" color="error">{error}</Text>
+          </>
         ) : null}
 
-        <View style={styles.actions}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>{t('common.back')}</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
+        <Spacer size="lg" />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Button
+            label={t('common.back')}
+            onPress={() => router.back()}
+            variant="ghost"
+            style={{ flex: 1 }}
+          />
+          <Button
+            label={t('common.continue')}
             onPress={handleLogin}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.primaryText}>
-              {isSubmitting ? t('auth.signingIn') : t('common.continue')}
-            </Text>
-          </Pressable>
+            variant="primary"
+            loading={isSubmitting}
+            style={{ flex: 1 }}
+          />
         </View>
 
+        <Spacer size="md" />
         <Pressable
-          style={styles.link}
           onPress={() =>
             router.replace({ pathname: '/auth/signup', params: { type } })
           }
         >
-          <Text style={styles.linkText}>
-            {t('auth.createNewAccount', {
-              type: type === 'factory' ? t('userType.factory') : t('userType.worker'),
-            })}
+          <Text variant="label" color="brand" align="center">
+            {t('auth.createNewAccount', { type: typeLabel })}
           </Text>
         </Pressable>
-
-      </SectionCard>
+      </Card>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', gap: 10 },
-  backButton: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  backText: { color: colors.text, fontWeight: '800' },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.55 },
-  primaryText: { color: colors.textInverse, fontWeight: '800' },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 999,
-    padding: 12,
-  },
-  errorText: { color: '#b91c1c', lineHeight: 20 },
-  link: { alignItems: 'center', marginTop: 4 },
-  linkText: { color: colors.primary, fontWeight: '700' },
-  apiHint: { color: colors.textMuted, fontSize: 11, textAlign: 'center', marginTop: 8 },
-});

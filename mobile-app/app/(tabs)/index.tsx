@@ -1,12 +1,17 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { colors } from '../../constants/colors';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { WorkerProfile } from '../../types';
+
+const BRAND_BLUE = '#1240C7';
+const ICON_BLUE = '#5B8DFF';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
 
 function profileCompleteness(p: WorkerProfile | null): { pct: number; missing: string[] } {
   if (!p) return { pct: 0, missing: ['skills', 'preferred areas', 'roles', 'headline'] };
@@ -19,150 +24,187 @@ function profileCompleteness(p: WorkerProfile | null): { pct: number; missing: s
     [p.salaryMin > 0, 'salary expectation'],
   ];
   const done = checks.filter(([ok]) => ok).length;
-  const missing = checks.filter(([ok]) => !ok).map(([, label]) => label);
-  return { pct: Math.round((done / checks.length) * 100), missing };
+  return {
+    pct: Math.round((done / checks.length) * 100),
+    missing: checks.filter(([ok]) => !ok).map(([, label]) => label),
+  };
+}
+
+function ActionCard({
+  icon, iconBg, iconColor, title, subtitle, onPress, badge,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  badge?: string;
+}) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      style={{ flex: 1, backgroundColor: WHITE, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', gap: 10 }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: iconBg, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={icon} size={20} color={iconColor} />
+        </View>
+        {badge ? (
+          <View style={{ backgroundColor: ORANGE, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 }}>
+            <Text style={{ color: WHITE, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>{badge}</Text>
+          </View>
+        ) : null}
+      </View>
+      <View>
+        <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', marginBottom: 2 }}>{title}</Text>
+        <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', lineHeight: 17 }}>{subtitle}</Text>
+      </View>
+    </Pressable>
+  );
 }
 
 export default function HomeTab() {
   const { user, signOut, profile, isWorker } = useAuth();
   const workerProfile = isWorker ? (profile as WorkerProfile | null) : null;
   const { pct, missing } = profileCompleteness(workerProfile);
+  const isOpenToWork = workerProfile?.isOpenToWork !== false;
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   return (
-    <Screen>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.brand}>Sketu</Text>
-          <Text style={styles.sub}>
-            {user ? `Welcome, ${user.name}` : 'Leadership & industrial hiring marketplace'}
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <Pressable style={styles.iconButton} onPress={() => router.push('/notifications' as never)}>
-            <Ionicons name="notifications-outline" size={20} color={colors.textInverse} />
-          </Pressable>
-          <Pressable
-            style={styles.logoutButton}
-            onPress={async () => {
-              await signOut();
-              router.replace('/auth/welcome');
-            }}
-          >
-            <Ionicons name="log-out-outline" size={18} color={colors.textInverse} />
-          </Pressable>
-        </View>
-      </View>
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
 
-      {/* Open-to-work status + profile completeness — worker only */}
-      {isWorker ? (
-        <Pressable style={styles.statusCard} onPress={() => router.push('/(tabs)/profile')}>
-          <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: workerProfile?.isOpenToWork !== false ? '#16a34a' : '#94a3b8' }]} />
-            <Text style={styles.statusLabel}>
-              {workerProfile?.isOpenToWork !== false ? 'Open to work' : 'Not looking right now'}
-            </Text>
-            <View style={{ flex: 1 }} />
-            <Text style={styles.statusPct}>{pct}% profile</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+          {/* ── Blue header ─────────────────────────────────────── */}
+          <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Greeting */}
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular' }}>
+                  {isWorker ? 'Job Seeker' : 'Employer'}
+                </Text>
+                <Text style={{ color: WHITE, fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4, marginTop: 2 }}>
+                  {`Hi, ${firstName}! 👋`}
+                </Text>
+              </View>
+              {/* Action buttons */}
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Pressable
+                  onPress={() => { Haptics.selectionAsync(); router.push('/notifications' as never); }}
+                  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="notifications-outline" size={20} color={WHITE} />
+                </Pressable>
+                <Pressable
+                  onPress={async () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); await signOut(); router.replace('/auth/welcome'); }}
+                  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="log-out-outline" size={20} color={WHITE} />
+                </Pressable>
+              </View>
+            </View>
           </View>
-          <View style={styles.progressBg}>
-            <View style={[styles.progressFill, { width: `${pct}%` as any }]} />
-          </View>
-          {missing.length > 0 && pct < 100 ? (
-            <Text style={styles.missingText}>Add: {missing.slice(0, 3).join(' · ')}{missing.length > 3 ? ` +${missing.length - 3} more` : ''}</Text>
-          ) : null}
-        </Pressable>
-      ) : null}
 
-      {/* Quick actions */}
-      <SectionCard title="Quick actions">
-        <View style={styles.quickGrid}>
-          <Pressable style={styles.quickCard} onPress={() => router.push('/(tabs)/jobs')}>
-            <Ionicons name="search-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Browse jobs</Text>
-            <Text style={styles.quickText}>Search live openings by area, role, shift and salary.</Text>
-          </Pressable>
-          <Pressable style={styles.quickCard} onPress={() => router.push('/(tabs)/resume')}>
-            <Ionicons name="document-attach-outline" size={22} color={colors.primary} />
-            <Text style={styles.quickTitle}>Resume builder</Text>
-            <Text style={styles.quickText}>Build your resume or upload a PDF to share with factories.</Text>
-          </Pressable>
-        </View>
+          {/* ── White card body ─────────────────────────────────── */}
+          <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 20 }}>
 
-        {isWorker ? (
-          <View style={styles.quickGrid}>
-            <Pressable style={styles.quickCard} onPress={() => router.push('/worker/applications')}>
-              <Ionicons name="document-text-outline" size={22} color={colors.primary} />
-              <Text style={styles.quickTitle}>Application history</Text>
-              <Text style={styles.quickText}>Track applied, shortlisted and hired jobs.</Text>
+            {/* Worker: profile completeness */}
+            {isWorker ? (
+              <Pressable
+                onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/profile'); }}
+                style={{ backgroundColor: WHITE, borderRadius: 18, padding: 18, borderWidth: 1, borderColor: '#E2E8F0' }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: isOpenToWork ? '#22C55E' : '#94A3B8' }} />
+                    <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                      {isOpenToWork ? 'Open to work' : 'Not looking right now'}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ color: BRAND_BLUE, fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>{pct}%</Text>
+                    <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>profile</Text>
+                    <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
+                  </View>
+                </View>
+                <View style={{ height: 6, backgroundColor: '#F1F5F9', borderRadius: 3, overflow: 'hidden' }}>
+                  <View style={{ height: 6, width: `${pct}%` as `${number}%`, backgroundColor: pct >= 80 ? '#22C55E' : BRAND_BLUE, borderRadius: 3 }} />
+                </View>
+                {missing.length > 0 && pct < 100 ? (
+                  <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 8 }}>
+                    {`Add: ${missing.slice(0, 3).join(' · ')}${missing.length > 3 ? ` +${missing.length - 3} more` : ''}`}
+                  </Text>
+                ) : null}
+              </Pressable>
+            ) : null}
+
+            {/* Quick actions */}
+            <View>
+              <Text style={{ color: '#0F172A', fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold', marginBottom: 14 }}>Quick actions</Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                {isWorker ? (
+                  <>
+                    <ActionCard icon="search-outline" iconBg="#EBF0FF" iconColor={BRAND_BLUE} title="Browse Jobs" subtitle="Search by area, role & shift" onPress={() => router.push('/(tabs)/jobs')} />
+                    <ActionCard icon="document-attach-outline" iconBg="#FFF7ED" iconColor={ORANGE} title="Resume" subtitle="Build or upload your CV" onPress={() => router.push('/(tabs)/resume')} />
+                  </>
+                ) : (
+                  <>
+                    <ActionCard icon="add-circle-outline" iconBg="#EBF0FF" iconColor={BRAND_BLUE} title="Post a Job" subtitle="Reach job seekers fast" onPress={() => router.push('/factory/post-job' as never)} />
+                    <ActionCard icon="people-outline" iconBg="#FFF7ED" iconColor={ORANGE} title="Pipeline" subtitle="Review applicants" onPress={() => router.push('/factory/pipeline' as never)} />
+                  </>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {isWorker ? (
+                  <>
+                    <ActionCard icon="document-text-outline" iconBg="#F0FDF4" iconColor="#22C55E" title="Applications" subtitle="Track your apply status" onPress={() => router.push('/worker/applications' as never)} />
+                    <ActionCard icon="bookmark-outline" iconBg="#EFF6FF" iconColor={ICON_BLUE} title="Saved Jobs" subtitle="Revisit bookmarked roles" onPress={() => router.push('/worker/saved' as never)} />
+                  </>
+                ) : (
+                  <>
+                    <ActionCard icon="briefcase-outline" iconBg="#F0FDF4" iconColor="#22C55E" title="My Jobs" subtitle="Manage your postings" onPress={() => router.push('/factory/my-jobs' as never)} />
+                    <ActionCard icon="people-circle-outline" iconBg="#EFF6FF" iconColor={ICON_BLUE} title="Find Talent" subtitle="Search job seekers" onPress={() => router.push('/(tabs)/talent')} />
+                  </>
+                )}
+              </View>
+            </View>
+
+            {/* Edit profile row */}
+            <Pressable
+              onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/profile'); }}
+              style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 14 }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#EBF0FF', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="create-outline" size={20} color={BRAND_BLUE} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Edit profile</Text>
+                <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>
+                  {isWorker ? 'Update skills, areas and availability' : 'Update company details and coverage areas'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </Pressable>
-            <Pressable style={styles.quickCard} onPress={() => router.push('/worker/saved')}>
-              <Ionicons name="bookmark-outline" size={22} color={colors.primary} />
-              <Text style={styles.quickTitle}>Saved jobs</Text>
-              <Text style={styles.quickText}>Keep promising roles and revisit them later.</Text>
-            </Pressable>
-          </View>
-        ) : null}
 
-        <Pressable style={styles.profileCard} onPress={() => router.push('/(tabs)/profile')}>
-          <Ionicons name="create-outline" size={22} color={colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.quickTitle}>Edit profile</Text>
-            <Text style={styles.quickText}>Update worker details, areas, skills, and availability.</Text>
+            {/* Settings row */}
+            <Pressable
+              onPress={() => { Haptics.selectionAsync(); router.push('/settings' as never); }}
+              style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 14 }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="settings-outline" size={20} color="#475569" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#0F172A', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Settings</Text>
+                <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>Language, account preferences</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
+            </Pressable>
+
           </View>
-        </Pressable>
-      </SectionCard>
-    </Screen>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  brand: { color: colors.textInverse, fontSize: 28, fontWeight: '800' },
-  sub: { color: colors.textMuted, marginTop: 4 },
-  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusCard: {
-    backgroundColor: colors.panel,
-    borderRadius: 20,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    gap: 10,
-  },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusDot: { width: 10, height: 10, borderRadius: 5 },
-  statusLabel: { color: colors.textInverse, fontWeight: '700', fontSize: 14 },
-  statusPct: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
-  progressBg: { height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' },
-  progressFill: { height: 6, backgroundColor: colors.primary, borderRadius: 3 },
-  missingText: { color: colors.textMuted, fontSize: 12 },
-  quickGrid: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  quickCard: { flex: 1, backgroundColor: '#f8fafc', borderRadius: 22, padding: 16 },
-  profileCard: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 22,
-    padding: 16,
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-  quickTitle: { color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 10 },
-  quickText: { color: colors.textSoft, marginTop: 6, lineHeight: 19, fontSize: 12 },
-});

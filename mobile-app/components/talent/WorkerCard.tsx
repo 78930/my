@@ -142,5 +142,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  skillText: { color: '#c2410c', fontWeight: '700', fontSize: 11 },
+  skillText: { color: colors.primary, fontWeight: '700', fontSize: 11 },
 });

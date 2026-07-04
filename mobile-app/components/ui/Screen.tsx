@@ -1,39 +1,61 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StyleSheet, ViewStyle } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ViewStyle,
+  StyleProp,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { RefreshControlProps } from 'react-native';
-import { colors } from '../../constants/colors';
+import { useTheme } from '../../theme/ThemeContext';
 
-type Props = {
+export interface ScreenProps {
   children: React.ReactNode;
-  contentContainerStyle?: ViewStyle;
+  scroll?: boolean;
+  contentContainerStyle?: StyleProp<ViewStyle>;
   refreshControl?: React.ReactElement<RefreshControlProps>;
-};
+  keyboardAware?: boolean;
+}
 
-export function Screen({ children, contentContainerStyle, refreshControl }: Props) {
+export function Screen({
+  children,
+  scroll = true,
+  contentContainerStyle,
+  refreshControl,
+  keyboardAware = true,
+}: ScreenProps) {
+  const { colors, spacing } = useTheme();
+
+  const scrollable = scroll ? (
+    <ScrollView
+      contentContainerStyle={[
+        { padding: spacing.screen, gap: spacing.lg, paddingBottom: 40 },
+        contentContainerStyle,
+      ]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      refreshControl={refreshControl}
+    >
+      {children}
+    </ScrollView>
+  ) : (
+    children
+  );
+
   return (
-    <SafeAreaView style={styles.safe}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={[styles.content, contentContainerStyle]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          refreshControl={refreshControl}
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }}>
+      {keyboardAware ? (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {children}
-        </ScrollView>
-      </KeyboardAvoidingView>
+          {scrollable}
+        </KeyboardAvoidingView>
+      ) : (
+        scrollable
+      )}
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  flex: { flex: 1 },
-  scroll: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: 16, gap: 14, paddingBottom: 40 },
-});

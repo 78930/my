@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router } from 'expo-router';
-import { InputField } from '../../components/ui/InputField';
 import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { colors } from '../../constants/colors';
+import { Card } from '../../components/ui/Card';
+import { Text } from '../../components/ui/Text';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { Spacer } from '../../components/ui/Spacer';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 
@@ -41,11 +43,11 @@ export default function OtpLoginScreen() {
       setStep('otp');
       setCooldown(RESEND_COOLDOWN);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('Could not send OTP. Check your connection and try again.');
-      }
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Could not send OTP. Check your connection and try again.'
+      );
     } finally {
       setSending(false);
     }
@@ -63,11 +65,7 @@ export default function OtpLoginScreen() {
       await signInWithOtp({ phone: phone.trim().replace(/\D/g, ''), otp: trimmedOtp });
       router.replace('/(tabs)');
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('Invalid OTP. Please try again.');
-      }
+      setError(err instanceof ApiError ? err.message : 'Invalid OTP. Please try again.');
     }
   }
 
@@ -81,126 +79,112 @@ export default function OtpLoginScreen() {
   if (step === 'otp') {
     return (
       <Screen>
-        <SectionCard
-          title="Enter OTP"
-          subtitle={`A one-time code was sent to ${phone}. Enter it below.`}
-        >
-          <InputField
-            icon="keypad-outline"
+        <Card>
+          <Text variant="h2">Enter OTP</Text>
+          <Spacer size="xs" />
+          <Text variant="body" color="secondary">
+            {`A one-time code was sent to ${phone}. Enter it below.`}
+          </Text>
+          <Spacer size="lg" />
+
+          <Input
+            label="One-time code"
             placeholder="6-digit OTP"
             value={otp}
             onChangeText={setOtp}
             keyboardType="number-pad"
             autoCapitalize="none"
+            leftIcon="keypad-outline"
           />
 
           {error ? (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
+            <>
+              <Spacer size="md" />
+              <Text variant="label" color="error">{error}</Text>
+            </>
           ) : null}
 
-          <View style={styles.actions}>
-            <Pressable
-              style={styles.backButton}
-              onPress={() => { setStep('phone'); setOtp(''); setError(''); setCooldown(0); }}
-            >
-              <Text style={styles.backText}>Change number</Text>
-            </Pressable>
-
-            <Pressable
-              style={[styles.primaryButton, isSubmitting && styles.buttonDisabled]}
+          <Spacer size="lg" />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Button
+              label="Change number"
+              onPress={() => {
+                setStep('phone');
+                setOtp('');
+                setError('');
+                setCooldown(0);
+              }}
+              variant="ghost"
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Verify OTP"
               onPress={handleVerifyOtp}
-              disabled={isSubmitting}
-            >
-              <Text style={styles.primaryText}>
-                {isSubmitting ? 'Verifying…' : 'Verify OTP'}
-              </Text>
-            </Pressable>
+              variant="primary"
+              loading={isSubmitting}
+              style={{ flex: 1 }}
+            />
           </View>
 
+          <Spacer size="md" />
           <Pressable
-            style={[styles.resendLink, (cooldown > 0 || sending) && styles.resendDisabled]}
             onPress={handleResend}
             disabled={cooldown > 0 || sending}
+            style={{ alignItems: 'center' }}
           >
-            <Text style={[styles.resendText, (cooldown > 0 || sending) && styles.resendTextDisabled]}>
+            <Text variant="label" color={cooldown > 0 || sending ? 'tertiary' : 'brand'}>
               {sending ? 'Sending…' : cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
             </Text>
           </Pressable>
-        </SectionCard>
+        </Card>
       </Screen>
     );
   }
 
   return (
     <Screen>
-      <SectionCard
-        title="Login with OTP"
-        subtitle="Enter your registered phone number. We'll send you a one-time code."
-      >
-        <InputField
-          icon="call-outline"
+      <Card>
+        <Text variant="h2">Login with OTP</Text>
+        <Spacer size="xs" />
+        <Text variant="body" color="secondary">
+          Enter your registered phone number. We'll send you a one-time code.
+        </Text>
+        <Spacer size="lg" />
+
+        <Input
+          label="Mobile number"
           placeholder="10-digit mobile number"
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
           autoCapitalize="none"
+          leftIcon="call-outline"
         />
 
         {error ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <>
+            <Spacer size="md" />
+            <Text variant="label" color="error">{error}</Text>
+          </>
         ) : null}
 
-        <View style={styles.actions}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-
-          <Pressable
-            style={[styles.primaryButton, sending && styles.buttonDisabled]}
+        <Spacer size="lg" />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Button
+            label="Back"
+            onPress={() => router.back()}
+            variant="ghost"
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Send OTP"
             onPress={handleSendOtp}
-            disabled={sending}
-          >
-            <Text style={styles.primaryText}>
-              {sending ? 'Sending…' : 'Send OTP'}
-            </Text>
-          </Pressable>
+            variant="primary"
+            loading={sending}
+            style={{ flex: 1 }}
+          />
         </View>
-      </SectionCard>
+      </Card>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  actions: { flexDirection: 'row', gap: 10 },
-  backButton: {
-    flex: 1,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  backText: { color: colors.text, fontWeight: '800' },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.55 },
-  primaryText: { color: colors.textInverse, fontWeight: '800' },
-  errorBox: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 999,
-    padding: 12,
-  },
-  errorText: { color: '#b91c1c', lineHeight: 20 },
-  resendLink: { alignItems: 'center', marginTop: 4 },
-  resendDisabled: { opacity: 0.45 },
-  resendText: { color: colors.primary, fontWeight: '700' },
-  resendTextDisabled: { color: colors.textMuted },
-});

@@ -1,23 +1,125 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { Screen } from '../../components/ui/Screen';
-import { SectionCard } from '../../components/ui/SectionCard';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { colors } from '../../constants/colors';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { Job } from '../../types';
 import { listFactoryJobs, updateJobStatus } from '../../services/factory';
 import { ApiError } from '../../lib/api';
 
-type Filter = 'ALL' | 'OPEN' | 'CLOSED';
+const BRAND_BLUE = '#1240C7';
+const ORANGE = '#FF8C00';
+const WHITE = '#FFFFFF';
 
-const FILTER_OPTIONS: { key: Filter; label: string }[] = [
-  { key: 'ALL', label: 'All jobs' },
+type Filter = 'ALL' | 'OPEN' | 'CLOSED';
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'ALL', label: 'All' },
   { key: 'OPEN', label: 'Open' },
   { key: 'CLOSED', label: 'Closed' },
 ];
+
+function FilterChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      onPress={() => { Haptics.selectionAsync(); onPress(); }}
+      style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, backgroundColor: active ? BRAND_BLUE : WHITE, borderWidth: 1.5, borderColor: active ? BRAND_BLUE : '#E2E8F0' }}
+    >
+      <Text style={{ color: active ? WHITE : '#475569', fontSize: 13, fontFamily: active ? 'PlusJakartaSans_700Bold' : 'PlusJakartaSans_500Medium' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function JobManageCard({
+  job, busy, onToggleStatus, onPipeline, onEdit,
+}: {
+  job: Job; busy: boolean; onToggleStatus: () => void; onPipeline: () => void; onEdit: () => void;
+}) {
+  const isOpen = (job.status || 'OPEN') === 'OPEN';
+  return (
+    <View style={{ backgroundColor: WHITE, borderRadius: 18, padding: 16, gap: 12, borderWidth: 1.5, borderColor: isOpen ? '#BFDBFE' : '#E2E8F0' }}>
+      {/* Status row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: isOpen ? '#F0FDF4' : '#F1F5F9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
+          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: isOpen ? '#22C55E' : '#94A3B8' }} />
+          <Text style={{ color: isOpen ? '#15803D' : '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{isOpen ? 'Open' : 'Closed'}</Text>
+        </View>
+        <Text style={{ color: '#94A3B8', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{job.employmentType || 'Full-time'}</Text>
+      </View>
+
+      <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>{job.title || job.role}</Text>
+
+      {/* Meta */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+        {job.area ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Ionicons name="location-outline" size={13} color="#64748B" />
+            <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{job.area}</Text>
+          </View>
+        ) : null}
+        {job.shift ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Ionicons name="time-outline" size={13} color="#64748B" />
+            <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{job.shift}</Text>
+          </View>
+        ) : null}
+        {job.pay ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Ionicons name="cash-outline" size={13} color="#64748B" />
+            <Text style={{ color: '#64748B', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>{job.pay}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {/* Skills */}
+      {job.skills.length > 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {job.skills.slice(0, 4).map((s) => (
+            <View key={s} style={{ backgroundColor: '#F1F5F9', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+              <Text style={{ color: '#475569', fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>{s}</Text>
+            </View>
+          ))}
+          {job.skills.length > 4 ? (
+            <Text style={{ color: '#94A3B8', fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', alignSelf: 'center' }}>+{job.skills.length - 4} more</Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* Divider */}
+      <View style={{ height: 1, backgroundColor: '#F1F5F9' }} />
+
+      {/* Action buttons */}
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Pressable
+          onPress={() => { Haptics.selectionAsync(); onPipeline(); }}
+          style={{ flex: 1, height: 40, backgroundColor: '#EBF0FF', borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+        >
+          <Ionicons name="git-network-outline" size={16} color={BRAND_BLUE} />
+          <Text style={{ color: BRAND_BLUE, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>Pipeline</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => { Haptics.selectionAsync(); onEdit(); }}
+          style={{ height: 40, paddingHorizontal: 16, backgroundColor: '#F1F5F9', borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Ionicons name="create-outline" size={18} color="#475569" />
+        </Pressable>
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onToggleStatus(); }}
+          disabled={busy}
+          style={{ flex: 1, height: 40, backgroundColor: isOpen ? '#FEF2F2' : '#F0FDF4', borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+        >
+          {busy
+            ? <ActivityIndicator size="small" color={isOpen ? '#EF4444' : '#22C55E'} />
+            : <Ionicons name={isOpen ? 'close-circle-outline' : 'refresh-outline'} size={16} color={isOpen ? '#EF4444' : '#22C55E'} />
+          }
+          <Text style={{ color: isOpen ? '#EF4444' : '#22C55E', fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>{isOpen ? 'Close' : 'Reopen'}</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
 
 export default function MyJobsScreen() {
   const { token, isFactory } = useAuth();
@@ -45,19 +147,14 @@ export default function MyJobsScreen() {
 
   useEffect(() => { load(); }, [token, isFactory]);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    load(true);
-  }, [token, isFactory]);
+  const onRefresh = useCallback(() => { setRefreshing(true); load(true); }, [token, isFactory]);
 
   async function handleToggleStatus(job: Job) {
     if (!token) return;
     const nextStatus = job.status === 'OPEN' ? 'CLOSED' : 'OPEN';
-    const label = nextStatus === 'CLOSED' ? 'close' : 'reopen';
-
     Alert.alert(
       `${nextStatus === 'CLOSED' ? 'Close' : 'Reopen'} job`,
-      `Are you sure you want to ${label} "${job.title || job.role}"?`,
+      `Are you sure you want to ${nextStatus === 'CLOSED' ? 'close' : 'reopen'} "${job.title || job.role}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -84,258 +181,109 @@ export default function MyJobsScreen() {
   const closedCount = jobs.filter((j) => j.status === 'CLOSED').length;
 
   return (
-    <Screen
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-    >
-      {/* Header */}
-      <View style={styles.topBar}>
-        <Pressable style={styles.iconButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back-outline" size={20} color={colors.textInverse} />
-        </Pressable>
-        <Text style={styles.topTitle}>My jobs</Text>
-        <Pressable style={styles.postBtn} onPress={() => router.push('/factory/post-job')}>
-          <Ionicons name="add" size={20} color="#fff" />
-        </Pressable>
-      </View>
-
-      {/* Summary chips */}
-      <View style={styles.chipRow}>
-        <View style={[styles.chip, { backgroundColor: '#eff6ff' }]}>
-          <Text style={[styles.chipNum, { color: '#3b82f6' }]}>{openCount}</Text>
-          <Text style={styles.chipLabel}>Open</Text>
-        </View>
-        <View style={[styles.chip, { backgroundColor: '#f1f5f9' }]}>
-          <Text style={[styles.chipNum, { color: '#64748b' }]}>{closedCount}</Text>
-          <Text style={styles.chipLabel}>Closed</Text>
-        </View>
-        <View style={[styles.chip, { backgroundColor: '#f0fdf4' }]}>
-          <Text style={[styles.chipNum, { color: '#16a34a' }]}>{jobs.length}</Text>
-          <Text style={styles.chipLabel}>Total posted</Text>
-        </View>
-      </View>
-
-      {/* Filter tabs */}
-      <View style={styles.filterRow}>
-        {FILTER_OPTIONS.map((opt) => (
-          <Pressable
-            key={opt.key}
-            style={[styles.filterTab, filter === opt.key && styles.filterTabActive]}
-            onPress={() => setFilter(opt.key)}
-          >
-            <Text style={[styles.filterTabText, filter === opt.key && styles.filterTabTextActive]}>
-              {opt.label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {loading ? <EmptyState icon="hourglass-outline" title="Loading jobs" message="Fetching your posted jobs…" /> : null}
-      {!loading && error ? <EmptyState icon="cloud-offline-outline" title="Unable to load jobs" message={error} /> : null}
-      {!loading && !error && !displayed.length ? (
-        <EmptyState
-          icon="briefcase-outline"
-          title={filter === 'ALL' ? 'No jobs posted yet' : `No ${filter.toLowerCase()} jobs`}
-          message={filter === 'ALL' ? 'Tap the + button to post your first job opening.' : `Switch to "All jobs" to see other postings.`}
-        />
-      ) : null}
-
-      {!loading && !error
-        ? displayed.map((job) => (
-            <JobManageCard
-              key={job.id}
-              job={job}
-              busy={busyJobId === job.id}
-              onToggleStatus={() => handleToggleStatus(job)}
-              onPipeline={() => router.push('/factory/pipeline')}
-              onEdit={() => router.push(`/factory/edit-job?id=${job.id}` as never)}
-            />
-          ))
-        : null}
-    </Screen>
-  );
-}
-
-function JobManageCard({
-  job,
-  busy,
-  onToggleStatus,
-  onPipeline,
-  onEdit,
-}: {
-  job: Job;
-  busy: boolean;
-  onToggleStatus: () => void;
-  onPipeline: () => void;
-  onEdit: () => void;
-}) {
-  const isOpen = (job.status || 'OPEN') === 'OPEN';
-
-  return (
-    <View style={card.wrap}>
-      {/* Status badge */}
-      <View style={card.topRow}>
-        <View style={[card.badge, isOpen ? card.badgeOpen : card.badgeClosed]}>
-          <View style={[card.dot, { backgroundColor: isOpen ? '#16a34a' : '#94a3b8' }]} />
-          <Text style={[card.badgeText, { color: isOpen ? '#16a34a' : '#64748b' }]}>
-            {isOpen ? 'Open' : 'Closed'}
-          </Text>
-        </View>
-        <Text style={card.type}>{job.employmentType || 'Full-time'}</Text>
-      </View>
-
-      {/* Role / title */}
-      <Text style={card.title}>{job.title || job.role}</Text>
-
-      {/* Meta row */}
-      <View style={card.metaRow}>
-        <MetaTag icon="location-outline" text={job.area} />
-        <MetaTag icon="time-outline" text={job.shift} />
-        <MetaTag icon="cash-outline" text={job.pay} />
-      </View>
-
-      {/* Skills */}
-      {job.skills.length > 0 ? (
-        <View style={card.skillsRow}>
-          {job.skills.slice(0, 4).map((s) => (
-            <View key={s} style={card.skillChip}>
-              <Text style={card.skillText}>{s}</Text>
-            </View>
-          ))}
-          {job.skills.length > 4 ? (
-            <Text style={card.moreSkills}>+{job.skills.length - 4} more</Text>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* Actions */}
-      <View style={card.actions}>
-        <Pressable style={card.pipelineBtn} onPress={onPipeline}>
-          <Ionicons name="git-network-outline" size={16} color={colors.primary} />
-          <Text style={card.pipelineBtnText}>Pipeline</Text>
-        </Pressable>
-        <Pressable style={card.editBtn} onPress={onEdit}>
-          <Ionicons name="create-outline" size={16} color="#7c3aed" />
-          <Text style={card.editBtnText}>Edit</Text>
-        </Pressable>
-        <Pressable
-          style={[card.toggleBtn, isOpen ? card.closeBtn : card.reopenBtn]}
-          onPress={onToggleStatus}
-          disabled={busy}
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND_BLUE} />}
         >
-          <Ionicons
-            name={busy ? 'hourglass-outline' : isOpen ? 'close-circle-outline' : 'refresh-outline'}
-            size={16}
-            color={isOpen ? '#b91c1c' : '#16a34a'}
-          />
-          <Text style={[card.toggleBtnText, { color: isOpen ? '#b91c1c' : '#16a34a' }]}>
-            {busy ? '…' : isOpen ? 'Close' : 'Reopen'}
-          </Text>
-        </Pressable>
-      </View>
+          {/* ── Blue header ── */}
+          <View style={{ backgroundColor: BRAND_BLUE, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 52 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+                <Pressable
+                  onPress={() => { Haptics.selectionAsync(); router.back(); }}
+                  style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Ionicons name="arrow-back-outline" size={20} color={WHITE} />
+                </Pressable>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: WHITE, fontSize: 24, fontFamily: 'PlusJakartaSans_800ExtraBold', letterSpacing: -0.4 }}>My Jobs</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.70)', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>{jobs.length} job{jobs.length === 1 ? '' : 's'} posted</Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/factory/post-job' as never); }}
+                style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: ORANGE, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Ionicons name="add" size={24} color={WHITE} />
+              </Pressable>
+            </View>
+
+            {/* Stat boxes */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1, backgroundColor: 'rgba(96,165,250,0.18)', borderRadius: 14, padding: 14, alignItems: 'center', gap: 4 }}>
+                <Text style={{ color: '#93C5FD', fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{openCount}</Text>
+                <Text style={{ color: '#93C5FD', fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>Open</Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 14, padding: 14, alignItems: 'center', gap: 4 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.80)', fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{closedCount}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>Closed</Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: 'rgba(52,211,153,0.18)', borderRadius: 14, padding: 14, alignItems: 'center', gap: 4 }}>
+                <Text style={{ color: '#6EE7B7', fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold' }}>{jobs.length}</Text>
+                <Text style={{ color: '#6EE7B7', fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium' }}>Total</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* ── White body ── */}
+          <View style={{ marginTop: -26, backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, flex: 1, padding: 20, gap: 14 }}>
+
+            {/* Filter chips */}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {FILTERS.map((f) => (
+                <FilterChip key={f.key} label={f.label} active={filter === f.key} onPress={() => setFilter(f.key)} />
+              ))}
+            </View>
+
+            {loading ? (
+              <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
+                <ActivityIndicator size="large" color={BRAND_BLUE} />
+                <Text style={{ color: '#64748B', fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium' }}>Loading your jobs…</Text>
+              </View>
+            ) : error ? (
+              <View style={{ alignItems: 'center', paddingVertical: 48, gap: 10 }}>
+                <Ionicons name="cloud-offline-outline" size={44} color="#94A3B8" />
+                <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>Unable to load jobs</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>{error}</Text>
+              </View>
+            ) : !displayed.length ? (
+              <View style={{ alignItems: 'center', paddingVertical: 48, gap: 12 }}>
+                <Ionicons name="briefcase-outline" size={44} color="#94A3B8" />
+                <Text style={{ color: '#0F172A', fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                  {filter === 'ALL' ? 'No jobs posted yet' : `No ${filter.toLowerCase()} jobs`}
+                </Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', textAlign: 'center' }}>
+                  {filter === 'ALL' ? 'Tap the + button to post your first job opening.' : 'Switch to "All" to see other postings.'}
+                </Text>
+                {filter === 'ALL' ? (
+                  <Pressable
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/factory/post-job' as never); }}
+                    style={{ height: 50, backgroundColor: BRAND_BLUE, borderRadius: 16, paddingHorizontal: 28, alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: WHITE, fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Post a Job</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ) : (
+              displayed.map((job) => (
+                <JobManageCard
+                  key={job.id}
+                  job={job}
+                  busy={busyJobId === job.id}
+                  onToggleStatus={() => handleToggleStatus(job)}
+                  onPipeline={() => router.push(`/factory/pipeline?jobId=${job.id}` as never)}
+                  onEdit={() => router.push(`/factory/edit-job?id=${job.id}` as never)}
+                />
+              ))
+            )}
+
+            <View style={{ height: 24 }} />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
-
-function MetaTag({ icon, text }: { icon: React.ComponentProps<typeof Ionicons>['name']; text: string }) {
-  if (!text) return null;
-  return (
-    <View style={meta.wrap}>
-      <Ionicons name={icon} size={13} color={colors.textMuted} />
-      <Text style={meta.text}>{text}</Text>
-    </View>
-  );
-}
-
-const meta = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  text: { color: colors.textSoft, fontSize: 12 },
-});
-
-const card = StyleSheet.create({
-  wrap: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
-    gap: 10,
-  },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  badgeOpen: { backgroundColor: '#f0fdf4' },
-  badgeClosed: { backgroundColor: '#f1f5f9' },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  badgeText: { fontWeight: '700', fontSize: 12 },
-  type: { color: colors.textMuted, fontSize: 12 },
-  title: { color: colors.text, fontWeight: '800', fontSize: 17, lineHeight: 22 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  skillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  skillChip: { backgroundColor: '#f1f5f9', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  skillText: { color: colors.textSoft, fontSize: 12, fontWeight: '600' },
-  moreSkills: { color: colors.textMuted, fontSize: 12, alignSelf: 'center' },
-  actions: { flexDirection: 'row', gap: 10, paddingTop: 4 },
-  pipelineBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#eff6ff',
-    borderRadius: 14,
-    paddingVertical: 10,
-  },
-  pipelineBtnText: { color: colors.primary, fontWeight: '700', fontSize: 14 },
-  toggleBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    borderRadius: 14,
-    paddingVertical: 10,
-  },
-  closeBtn: { backgroundColor: '#fff1f2', borderWidth: 1, borderColor: '#fecdd3' },
-  reopenBtn: { backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0' },
-  toggleBtnText: { fontWeight: '700', fontSize: 14 },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    backgroundColor: '#f5f3ff',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    borderColor: '#ede9fe',
-  },
-  editBtnText: { color: '#7c3aed', fontWeight: '700', fontSize: 14 },
-});
-
-const styles = StyleSheet.create({
-  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  topTitle: { color: colors.textInverse, fontSize: 20, fontWeight: '800' },
-  iconButton: {
-    width: 42, height: 42, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.panel,
-  },
-  postBtn: {
-    width: 42, height: 42, borderRadius: 14,
-    backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  chipRow: { flexDirection: 'row', gap: 10 },
-  chip: { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', gap: 2 },
-  chipNum: { fontSize: 22, fontWeight: '800' },
-  chipLabel: { color: colors.textSoft, fontSize: 11, fontWeight: '600' },
-  filterRow: { flexDirection: 'row', backgroundColor: colors.panel, borderRadius: 16, padding: 4, gap: 2 },
-  filterTab: { flex: 1, paddingVertical: 8, borderRadius: 12, alignItems: 'center' },
-  filterTabActive: { backgroundColor: colors.primary },
-  filterTabText: { color: colors.textMuted, fontWeight: '700', fontSize: 13 },
-  filterTabTextActive: { color: '#fff' },
-});
