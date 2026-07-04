@@ -65,7 +65,7 @@ function buildAccountEmail(phone: string, role: "WORKER" | "FACTORY") {
   return `${phone}.${role.toLowerCase()}@sketu.local`;
 }
 
-function createAuthResponse(user: { _id: unknown; role: "WORKER" | "FACTORY"; email: string; phone?: string }) {
+function createAuthResponse(user: { _id: unknown; role: "WORKER" | "FACTORY" | "ADMIN"; email: string; phone?: string }) {
   const token = signAccessToken({
     sub: String(user._id),
     role: user.role,
@@ -274,7 +274,9 @@ router.get(
     const profile =
       user.role === "WORKER"
         ? await WorkerProfileModel.findOne({ user: user._id })
-        : await FactoryProfileModel.findOne({ user: user._id });
+        : user.role === "FACTORY"
+        ? await FactoryProfileModel.findOne({ user: user._id })
+        : null; // ADMIN has no profile document
 
     return res.json({ user, profile });
   })

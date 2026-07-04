@@ -4,6 +4,8 @@ import { getStoredItem, removeStoredItem, setStoredItem } from '../lib/storage';
 import { getMe, login, loginWithOtp, registerFactory, registerWorker, requestLoginOtp, OtpRequestResponse } from '../services/auth';
 import { ApiError } from '../lib/api';
 import { AuthUser, FactoryProfile, UserType, WorkerProfile } from '../types';
+import { registerForPushNotifications } from '../lib/notifications';
+import { savePushToken } from '../services/workers';
 
 const SESSION_KEY = 'sketu.session';
 
@@ -84,6 +86,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshSession();
   }, [refreshSession]);
+
+  // After any successful login, register for push notifications and send token to backend.
+  useEffect(() => {
+    if (!token) return;
+    registerForPushNotifications().then((pushToken) => {
+      if (pushToken) savePushToken(token, pushToken).catch(() => {});
+    });
+  }, [token]);
 
   const signIn = useCallback(async (payload: { role: UserType; name: string; phone: string }) => {
     setIsSubmitting(true);

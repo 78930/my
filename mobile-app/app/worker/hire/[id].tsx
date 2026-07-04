@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -8,7 +8,7 @@ import { Text } from '../../../components/ui/Text';
 import { useAuth } from '../../../context/AuthContext';
 import { ApiError } from '../../../lib/api';
 import { JobApplication } from '../../../types';
-import { listMyApplications } from '../../../services/applications';
+import { listMyApplications, respondToHireOffer } from '../../../services/applications';
 
 const BRAND_BLUE = '#1240C7';
 const WHITE = '#FFFFFF';
@@ -40,6 +40,8 @@ export default function HireOfferScreen() {
   const [application, setApplication] = useState<JobApplication | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [responding, setResponding] = useState(false);
+  const [hireStatus, setHireStatus] = useState<'OFFERED' | 'ACCEPTED' | 'REJECTED' | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,8 +52,10 @@ export default function HireOfferScreen() {
         const items = await listMyApplications(token);
         const found = items.find((a) => a.id === id);
         if (!cancelled) {
-          if (found) setApplication(found);
-          else setError('Hire offer not found.');
+          if (found) {
+            setApplication(found);
+            setHireStatus((found.hireStatus as any) ?? 'OFFERED');
+          } else setError('Hire offer not found.');
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof ApiError ? err.message : 'Unable to load hire offer');
@@ -203,6 +207,73 @@ export default function HireOfferScreen() {
                     </View>
                   </View>
                 </View>
+
+                {/* Accept / Reject offer */}
+                {hireStatus === 'OFFERED' ? (
+                  <View style={{ gap: 10 }}>
+                    <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Respond to offer</Text>
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <Pressable
+                        disabled={responding}
+                        onPress={() => {
+                          Alert.alert('Accept offer', 'Confirm you want to accept this hire offer?', [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Accept', onPress: async () => {
+                                setResponding(true);
+                                try {
+                                  await respondToHireOffer(token!, application.id, 'ACCEPTED');
+                                  setHireStatus('ACCEPTED');
+                                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                                } catch {
+                                  Alert.alert('Error', 'Could not accept the offer. Please try again.');
+                                } finally { setResponding(false); }
+                              },
+                            },
+                          ]);
+                        }}
+                        style={{ flex: 1, height: 50, backgroundColor: '#22C55E', borderRadius: 16, alignItems: 'center', justifyContent: 'center', opacity: responding ? 0.7 : 1 }}
+                      >
+                        {responding ? <ActivityIndicator color="#fff" /> : (
+                          <Text style={{ color: '#fff', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Accept</Text>
+                        )}
+                      </Pressable>
+                      <Pressable
+                        disabled={responding}
+                        onPress={() => {
+                          Alert.alert('Decline offer', 'Are you sure you want to decline this hire offer?', [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Decline', style: 'destructive', onPress: async () => {
+                                setResponding(true);
+                                try {
+                                  await respondToHireOffer(token!, application.id, 'REJECTED');
+                                  setHireStatus('REJECTED');
+                                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                                } catch {
+                                  Alert.alert('Error', 'Could not decline the offer. Please try again.');
+                                } finally { setResponding(false); }
+                              },
+                            },
+                          ]);
+                        }}
+                        style={{ flex: 1, height: 50, backgroundColor: '#FEE2E2', borderRadius: 16, alignItems: 'center', justifyContent: 'center', opacity: responding ? 0.7 : 1 }}
+                      >
+                        <Text style={{ color: '#EF4444', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Decline</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : hireStatus === 'ACCEPTED' ? (
+                  <View style={{ backgroundColor: '#F0FDF4', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                    <Ionicons name="checkmark-circle" size={24} color="#22C55E" />
+                    <Text style={{ flex: 1, color: '#166534', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>You accepted this offer</Text>
+                  </View>
+                ) : hireStatus === 'REJECTED' ? (
+                  <View style={{ backgroundColor: '#FEF2F2', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#FECACA' }}>
+                    <Ionicons name="close-circle" size={24} color="#EF4444" />
+                    <Text style={{ flex: 1, color: '#991B1B', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>You declined this offer</Text>
+                  </View>
+                ) : null}
 
                 {/* View job button */}
                 {application.jobId ? (

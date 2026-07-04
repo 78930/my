@@ -20,6 +20,8 @@ export type Job = {
   employmentType?: string;
 };
 
+export type VerificationStatus = 'UNVERIFIED' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+
 export type Worker = {
   id: string;
   name: string;
@@ -40,6 +42,8 @@ export type Worker = {
   certifications: string[];
   availableNow: boolean;
   isOpenToWork?: boolean;
+  verificationStatus?: VerificationStatus;
+  verificationNote?: string;
 };
 
 export type AuthUser = {
@@ -64,6 +68,8 @@ export type WorkerProfile = {
   salaryMin: number;
   availability?: string;
   isOpenToWork: boolean;
+  verificationStatus?: VerificationStatus;
+  verificationNote?: string;
 };
 
 export type FactoryProfile = {

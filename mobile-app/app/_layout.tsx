@@ -16,8 +16,6 @@ import { AuthProvider } from '../context/AuthContext';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 import '../lib/i18n';
 import { loadAppLanguage } from '../lib/language';
-import { registerForPushNotifications } from '../lib/notifications';
-
 // Hold the native splash screen until both fonts and i18n are ready.
 SplashScreen.preventAutoHideAsync();
 
@@ -34,7 +32,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     loadAppLanguage().then(() => setLangReady(true));
-    registerForPushNotifications();
   }, []);
 
   const ready = (fontsLoaded || fontError !== null) && langReady;

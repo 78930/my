@@ -8,6 +8,7 @@ import JobModel from "../models/Job.js";
 import HireModel from "../models/Hire.js";
 import WorkerProfileModel from "../models/WorkerProfile.js";
 import UserModel from "../models/User.js";
+import { sendPushToUser } from "../services/push.js";
 
 const router = Router();
 
@@ -136,6 +137,16 @@ router.post(
 
     application.status = "SHORTLISTED";
     await application.save();
+
+    // Notify worker — reuse the already-fetched `job` for the title
+    const workerUserForNotify = await UserModel.findById(application.workerUser, "pushToken").lean();
+    await sendPushToUser(
+      (workerUserForNotify as any)?.pushToken,
+      "You've been shortlisted!",
+      `Great news — you've been shortlisted for ${job.title ?? "a job"}.`,
+      { applicationId: String(application._id), type: "SHORTLISTED" }
+    );
+
     return res.json(application);
   })
 );
@@ -161,6 +172,15 @@ router.post(
 
     application.status = "HIRED";
     await application.save();
+
+    // Notify worker of hire offer — reuse already-fetched `job`
+    const workerUserForHireNotify = await UserModel.findById(application.workerUser, "pushToken").lean();
+    await sendPushToUser(
+      (workerUserForHireNotify as any)?.pushToken,
+      "You've received a hire offer!",
+      `Congratulations! You've been offered the role of ${job.title ?? "a job"}. Tap to view details.`,
+      { applicationId: String(application._id), type: "HIRED" }
+    );
 
     const hire = await HireModel.findOneAndUpdate(
       { application: application._id },
@@ -205,6 +225,15 @@ router.post(
 
     application.status = "REJECTED";
     await application.save();
+
+    const workerUserForRejectNotify = await UserModel.findById(application.workerUser, "pushToken").lean();
+    await sendPushToUser(
+      (workerUserForRejectNotify as any)?.pushToken,
+      "Application update",
+      `Your application for ${job.title ?? "a role"} was not taken forward this time.`,
+      { applicationId: String(application._id), type: "REJECTED" }
+    );
+
     return res.json(application);
   })
 );

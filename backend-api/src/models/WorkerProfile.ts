@@ -16,10 +16,17 @@ const workerProfileSchema = new Schema(
     salaryMin: { type: Number, default: 0 },
     availability: { type: String, default: "Immediate" },
     isOpenToWork: { type: Boolean, default: true },
+    verificationStatus: {
+      type: String,
+      enum: ["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED"],
+      default: "UNVERIFIED",
+    },
+    verificationNote: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
+workerProfileSchema.index({ verificationStatus: 1 });
 workerProfileSchema.index({ skills: 1 });
 workerProfileSchema.index({ preferredRoles: 1 });
 workerProfileSchema.index({ preferredAreas: 1 });

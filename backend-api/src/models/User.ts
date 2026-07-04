@@ -8,7 +8,8 @@ const UserSchema = new Schema(
     email: { type: String, required: true, unique: true },
     phone: { type: String, required: true, unique: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ["WORKER", "FACTORY"], required: true },
+    role: { type: String, enum: ["WORKER", "FACTORY", "ADMIN"], required: true },
+    pushToken: { type: String, default: null },
   },
   { timestamps: true }
 );

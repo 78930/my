@@ -6,8 +6,9 @@ import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
-import { getWorkerProfile, updateWorkerProfile } from '../../services/workers';
+import { getWorkerProfile, requestVerification, updateWorkerProfile } from '../../services/workers';
 import { ApiError } from '../../lib/api';
+import { type VerificationStatus } from '../../types';
 
 const BRAND_BLUE = '#1240C7';
 const ORANGE = '#FF8C00';
@@ -52,6 +53,9 @@ export default function ResumeTab() {
   const [address, setAddress] = useState('');
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('UNVERIFIED');
+  const [verificationNote, setVerificationNote] = useState('');
+  const [requesting, setRequesting] = useState(false);
   const [pdfFile, setPdfFile] = useState<{ name: string; uri: string; size?: number } | null>(null);
 
   useEffect(() => {
@@ -62,6 +66,8 @@ export default function ResumeTab() {
       if (p.experienceYears) setExperience(`${p.experienceYears} years`);
       if (p.preferredAreas?.length) setAddress(p.preferredAreas[0]);
       if (p.certifications?.length) setEducation(p.certifications.join(', '));
+      if (p.verificationStatus) setVerificationStatus(p.verificationStatus);
+      if (p.verificationNote) setVerificationNote(p.verificationNote);
     }).catch(() => {});
   }, [token]);
 
@@ -102,6 +108,80 @@ export default function ResumeTab() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleRequestVerification() {
+    if (!token) return;
+    setRequesting(true);
+    try {
+      const res = await requestVerification(token);
+      setVerificationStatus(res.verificationStatus as VerificationStatus);
+      Alert.alert('Submitted!', res.message);
+    } catch (err) {
+      Alert.alert('Error', err instanceof ApiError ? err.message : 'Could not submit. Please try again.');
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  function VerificationBanner() {
+    if (verificationStatus === 'VERIFIED') {
+      return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F0FDF4', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#BBF7D0' }}>
+          <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#15803D', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Profile Verified</Text>
+            <Text style={{ color: '#16A34A', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>Employers see a verified badge on your profile</Text>
+          </View>
+        </View>
+      );
+    }
+    if (verificationStatus === 'PENDING') {
+      return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFF7ED', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#FED7AA' }}>
+          <Ionicons name="time-outline" size={22} color="#EA580C" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#C2410C', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Under Review</Text>
+            <Text style={{ color: '#EA580C', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>Our team is reviewing your profile. Usually done within 24 hours.</Text>
+          </View>
+        </View>
+      );
+    }
+    if (verificationStatus === 'REJECTED') {
+      return (
+        <View style={{ gap: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#FEF2F2', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#FECACA' }}>
+            <Ionicons name="close-circle-outline" size={22} color="#DC2626" style={{ marginTop: 1 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#B91C1C', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Verification Rejected</Text>
+              {verificationNote ? (
+                <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }}>Reason: {verificationNote}</Text>
+              ) : null}
+              <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 4 }}>Update your profile and resubmit.</Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleRequestVerification(); }}
+            disabled={requesting}
+            style={{ height: 48, backgroundColor: requesting ? '#93A5E0' : BRAND_BLUE, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+          >
+            <Ionicons name="shield-checkmark-outline" size={16} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 14 }}>{requesting ? 'Submitting…' : 'Resubmit for Verification'}</Text>
+          </Pressable>
+        </View>
+      );
+    }
+    // UNVERIFIED
+    return (
+      <Pressable
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleRequestVerification(); }}
+        disabled={requesting}
+        style={{ height: 52, backgroundColor: requesting ? '#93A5E0' : BRAND_BLUE, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+      >
+        <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF" />
+        <Text style={{ color: '#FFFFFF', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>{requesting ? 'Submitting…' : 'Request Profile Verification'}</Text>
+      </Pressable>
+    );
   }
 
   // ── Form view ──────────────────────────────────────────────────────────────
@@ -158,6 +238,13 @@ export default function ResumeTab() {
                   <Ionicons name="save-outline" size={18} color={WHITE} />
                   <Text style={{ color: WHITE, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>{saving ? 'Saving…' : 'Save resume'}</Text>
                 </Pressable>
+
+                <View style={{ height: 1, backgroundColor: '#E2E8F0' }} />
+                <Text style={{ color: '#0F172A', fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold' }}>Profile Verification</Text>
+                <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', lineHeight: 19 }}>
+                  Get your profile verified by our team. Verified profiles show a blue tick to employers.
+                </Text>
+                <VerificationBanner />
               </View>
             </ScrollView>
           </KeyboardAvoidingView>

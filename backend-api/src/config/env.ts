@@ -24,4 +24,7 @@ export const env = {
 
   otpDefaultCountryCode: process.env.OTP_DEFAULT_COUNTRY_CODE ?? "+91",
   otpExpirySeconds: Number(process.env.OTP_EXPIRY_SECONDS ?? 300), // 5 minutes
+
+  // Admin bootstrap — set a strong random string to create the first admin account
+  adminSecret: process.env.ADMIN_SECRET ?? "",
 };

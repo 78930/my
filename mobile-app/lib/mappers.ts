@@ -79,6 +79,8 @@ export function mapWorker(item: any): Worker {
     certifications: Array.isArray(item?.certifications) ? item.certifications : [],
     availableNow: item?.isOpenToWork ?? true,
     isOpenToWork: item?.isOpenToWork ?? true,
+    verificationStatus: item?.verificationStatus ?? 'UNVERIFIED',
+    verificationNote: item?.verificationNote ?? '',
   };
 }
 
@@ -96,6 +98,8 @@ export function mapWorkerProfile(item: any): WorkerProfile {
     salaryMin: Number(item?.salaryMin || 0),
     availability: item?.availability || '',
     isOpenToWork: item?.isOpenToWork ?? true,
+    verificationStatus: item?.verificationStatus ?? 'UNVERIFIED',
+    verificationNote: item?.verificationNote ?? '',
   };
 }
 

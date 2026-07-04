@@ -15,7 +15,12 @@ export function WorkerCard({ worker, matchScore, onPress }: { worker: Worker; ma
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name} numberOfLines={1}>{worker.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Text style={styles.name} numberOfLines={1}>{worker.name}</Text>
+            {worker.verificationStatus === 'VERIFIED' ? (
+              <Ionicons name="checkmark-circle" size={16} color="#1240C7" />
+            ) : null}
+          </View>
           <Text style={styles.role} numberOfLines={1}>{worker.role || 'Industrial Worker'}</Text>
         </View>
         {worker.availableNow ? (
