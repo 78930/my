@@ -7,7 +7,7 @@ export function roleToUserType(role: ApiRole): UserType {
 }
 
 export function mapAuthUser(input: {
-  user: { id?: string; _id?: string; email: string; phone?: string; role: ApiRole };
+  user: { id?: string; _id?: string; email: string; phone?: string; role: ApiRole; photoBase64?: string | null; photoMimeType?: string };
   profile?: unknown;
 }): AuthUser {
   const profile = input.profile as Partial<WorkerProfile & FactoryProfile> | undefined;
@@ -26,6 +26,8 @@ export function mapAuthUser(input: {
     phone: input.user.phone,
     type,
     role: input.user.role,
+    photoBase64: input.user.photoBase64 ?? null,
+    photoMimeType: input.user.photoMimeType ?? 'image/jpeg',
   };
 }
 

@@ -107,7 +107,7 @@ export async function registerFactory(payload: SimpleRegisterPayload): Promise<S
 }
 
 export async function getMe(token: string): Promise<{ user: AuthUser; profile: WorkerProfile | FactoryProfile | null }> {
-  const result = await apiRequest<{ user: { _id?: string; id?: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' }; profile?: any }>(
+  const result = await apiRequest<{ user: { _id?: string; id?: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY'; photoBase64?: string | null; photoMimeType?: string }; profile?: any }>(
     '/api/auth/me',
     {
       token,
@@ -125,4 +125,16 @@ export async function getMe(token: string): Promise<{ user: AuthUser; profile: W
     user: mapAuthUser({ user: result.user, profile }),
     profile,
   };
+}
+
+export async function uploadProfilePhoto(
+  token: string,
+  photoBase64: string,
+  mimeType = 'image/jpeg'
+): Promise<void> {
+  await apiRequest('/api/auth/me/photo', {
+    method: 'POST',
+    token,
+    body: { photoBase64, mimeType },
+  });
 }

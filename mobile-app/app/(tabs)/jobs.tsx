@@ -35,8 +35,8 @@ export default function JobsTab() {
   const workerProfile = isWorker ? (profile as WorkerProfile | null) : null;
 
   const [queryState, setQueryState] = useState<QueryState>(() => ({
-    area: workerProfile?.preferredAreas?.[0] || 'Jeedimetla',
-    role: workerProfile?.preferredRoles?.[0] || 'Production Supervisor',
+    area: workerProfile?.preferredAreas?.[0] || '',
+    role: '',
     search: '',
     page: 1,
   }));
@@ -89,7 +89,7 @@ export default function JobsTab() {
   }
 
   const noticeColor = notice.includes('successfully') || notice.includes('saved') ? '#22C55E' : notice.includes('already') ? BRAND_BLUE : '#EF4444';
-  const subtitle = useMemo(() => `${items.length} result${items.length === 1 ? '' : 's'}`, [items.length]);
+  const subtitle = useMemo(() => loading ? 'Loading…' : `${items.length} result${items.length === 1 ? '' : 's'}`, [items.length, loading]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
@@ -134,6 +134,7 @@ export default function JobsTab() {
             <View style={{ gap: 10, paddingHorizontal: 20 }}>
               <Text style={{ color: '#475569', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' }}>Industrial Area</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                <FilterChip key="all-area" label="All" active={area === ''} onPress={() => setQueryState((q) => ({ ...q, area: '', page: 1 }))} />
                 {industrialAreas.map((item) => (
                   <FilterChip key={item} label={item} active={area === item} onPress={() => setQueryState((q) => ({ ...q, area: item, page: 1 }))} />
                 ))}
@@ -144,6 +145,7 @@ export default function JobsTab() {
             <View style={{ gap: 10, paddingHorizontal: 20 }}>
               <Text style={{ color: '#475569', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' }}>Popular Roles</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                <FilterChip key="all-role" label="All" active={role === ''} onPress={() => setQueryState((q) => ({ ...q, role: '', page: 1 }))} />
                 {mostDemandingRoles.map((item) => (
                   <FilterChip key={item} label={item} active={role === item} onPress={() => setQueryState((q) => ({ ...q, role: item, page: 1 }))} />
                 ))}

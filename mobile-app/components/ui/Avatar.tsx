@@ -1,8 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 
-const SIZES = { sm: 32, md: 44, lg: 56 } as const;
-const FONT_SIZES = { sm: 12, md: 16, lg: 20 } as const;
+const SIZES = { sm: 32, md: 44, lg: 56, xl: 80 } as const;
+const FONT_SIZES = { sm: 12, md: 16, lg: 20, xl: 28 } as const;
 
 const PALETTE = [
   '#6D5AE6', '#10B981', '#F59E0B', '#EF4444', '#3B82F6',
@@ -25,11 +25,12 @@ function toInitials(name: string): string {
 
 export interface AvatarProps {
   name: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   color?: string;
+  imageUri?: string | null;
 }
 
-export function Avatar({ name, size = 'md', color }: AvatarProps) {
+export function Avatar({ name, size = 'md', color, imageUri }: AvatarProps) {
   const dim = SIZES[size];
   const bg = color ?? deriveColor(name);
 
@@ -42,17 +43,26 @@ export function Avatar({ name, size = 'md', color }: AvatarProps) {
         backgroundColor: bg,
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
       }}
     >
-      <Text
-        style={{
-          fontSize: FONT_SIZES[size],
-          fontFamily: 'PlusJakartaSans_700Bold',
-          color: '#FFFFFF',
-        }}
-      >
-        {toInitials(name)}
-      </Text>
+      {imageUri ? (
+        <Image
+          source={{ uri: imageUri }}
+          style={{ width: dim, height: dim, borderRadius: dim / 2 }}
+          resizeMode="cover"
+        />
+      ) : (
+        <Text
+          style={{
+            fontSize: FONT_SIZES[size],
+            fontFamily: 'PlusJakartaSans_700Bold',
+            color: '#FFFFFF',
+          }}
+        >
+          {toInitials(name)}
+        </Text>
+      )}
     </View>
   );
 }

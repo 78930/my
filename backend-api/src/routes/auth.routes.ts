@@ -264,7 +264,7 @@ router.get(
   requireAuth,
   asyncHandler<AuthRequest>(async (req, res) => {
     const user = await UserModel.findById(req.user!.id).select(
-      "email phone role name createdAt"
+      "email phone role name photoBase64 photoMimeType createdAt"
     );
 
     if (!user) {
@@ -279,6 +279,27 @@ router.get(
         : null; // ADMIN has no profile document
 
     return res.json({ user, profile });
+  })
+);
+
+// POST /api/auth/me/photo — upload or replace profile photo
+router.post(
+  "/me/photo",
+  requireAuth,
+  asyncHandler<AuthRequest>(async (req, res) => {
+    const { photoBase64, mimeType } = z
+      .object({
+        photoBase64: z.string().min(100),
+        mimeType: z.string().default("image/jpeg"),
+      })
+      .parse(req.body);
+
+    await UserModel.findByIdAndUpdate(req.user!.id, {
+      photoBase64,
+      photoMimeType: mimeType,
+    });
+
+    return res.json({ message: "Profile photo saved." });
   })
 );
 

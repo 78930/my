@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
-import { getWorkerProfile, requestVerification, updateWorkerProfile } from '../../services/workers';
+import { getWorkerProfile, requestVerification, updateWorkerProfile, listDocuments, uploadResumePdf, deleteResumePdf } from '../../services/workers';
 import { ApiError } from '../../lib/api';
 import { type VerificationStatus } from '../../types';
 
@@ -57,6 +57,8 @@ export default function ResumeTab() {
   const [verificationNote, setVerificationNote] = useState('');
   const [requesting, setRequesting] = useState(false);
   const [pdfFile, setPdfFile] = useState<{ name: string; uri: string; size?: number } | null>(null);
+  const [resumeStatus, setResumeStatus] = useState<'not_uploaded' | 'uploading' | 'uploaded' | 'error'>('not_uploaded');
+  const [resumeUploadedAt, setResumeUploadedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -69,11 +71,21 @@ export default function ResumeTab() {
       if (p.verificationStatus) setVerificationStatus(p.verificationStatus);
       if (p.verificationNote) setVerificationNote(p.verificationNote);
     }).catch(() => {});
+    listDocuments(token).then((docs) => {
+      const resume = docs.find((d) => d.type === 'RESUME_PDF');
+      if (resume) {
+        setResumeStatus('uploaded');
+        setResumeUploadedAt(resume.updatedAt);
+      }
+    }).catch(() => {});
   }, [token]);
 
   async function pickPdf() {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'application/pdf',
+        copyToCacheDirectory: true,
+      });
       if (result.canceled) return;
       const asset = result.assets[0];
       setPdfFile({ name: asset.name, uri: asset.uri, size: asset.size });
@@ -108,6 +120,61 @@ export default function ResumeTab() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function uploadPdf() {
+    if (!pdfFile?.uri || !token) return;
+    setResumeStatus('uploading');
+    try {
+      // XHR with arraybuffer is the only reliable way to read a local file URI
+      // on Android without expo-file-system. copyToCacheDirectory ensures we
+      // get a file:// URI that React Native's network layer can open.
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.responseType = 'arraybuffer';
+        xhr.onload = () => {
+          const bytes = new Uint8Array(xhr.response as ArrayBuffer);
+          let binary = '';
+          const CHUNK = 1024;
+          for (let i = 0; i < bytes.length; i += CHUNK) {
+            binary += String.fromCharCode.apply(
+              null,
+              bytes.subarray(i, Math.min(i + CHUNK, bytes.length)) as unknown as number[]
+            );
+          }
+          resolve(btoa(binary));
+        };
+        xhr.onerror = () => reject(new Error('Could not read file'));
+        xhr.open('GET', pdfFile!.uri, true);
+        xhr.send();
+      });
+      const result = await uploadResumePdf(token, base64);
+      setResumeStatus('uploaded');
+      setResumeUploadedAt(result.uploadedAt);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Uploaded!', 'Your resume PDF has been saved. Admin will review it.');
+    } catch {
+      setResumeStatus('error');
+      Alert.alert('Upload failed', 'Could not upload the PDF. Please try again.');
+    }
+  }
+
+  async function handleDeleteResume() {
+    Alert.alert('Remove resume', 'Are you sure you want to remove your resume PDF?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Remove', style: 'destructive', onPress: async () => {
+          try {
+            await deleteResumePdf(token!);
+            setResumeStatus('not_uploaded');
+            setResumeUploadedAt(null);
+            setPdfFile(null);
+          } catch {
+            Alert.alert('Error', 'Could not remove the resume.');
+          }
+        },
+      },
+    ]);
   }
 
   async function handleRequestVerification() {
@@ -269,9 +336,34 @@ export default function ResumeTab() {
             </View>
 
             <View style={{ marginTop: -22, backgroundColor: WHITE, borderTopLeftRadius: 24, borderTopRightRadius: 24, flex: 1, padding: 20, gap: 16 }}>
+
+              {/* Already uploaded banner */}
+              {resumeStatus === 'uploaded' && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F0FDF4', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#BBF7D0' }}>
+                  <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#15803D', fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold' }}>Resume uploaded</Text>
+                    {resumeUploadedAt ? (
+                      <Text style={{ color: '#16A34A', fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular' }}>
+                        Uploaded on {new Date(resumeUploadedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              )}
+
+              {/* Error banner */}
+              {resumeStatus === 'error' && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FEF2F2', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#FECACA' }}>
+                  <Ionicons name="alert-circle-outline" size={22} color="#DC2626" />
+                  <Text style={{ flex: 1, color: '#B91C1C', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>Upload failed. Please try again.</Text>
+                </View>
+              )}
+
+              {/* File dropzone */}
               <Pressable
-                onPress={pickPdf}
-                style={{ borderWidth: 2, borderColor: '#E2E8F0', borderStyle: 'dashed', borderRadius: 18, paddingVertical: 44, alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC' }}
+                onPress={resumeStatus !== 'uploading' ? pickPdf : undefined}
+                style={{ borderWidth: 2, borderColor: pdfFile ? BRAND_BLUE : '#E2E8F0', borderStyle: 'dashed', borderRadius: 18, paddingVertical: 44, alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC' }}
               >
                 <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#EBF0FF', alignItems: 'center', justifyContent: 'center' }}>
                   <Ionicons name={pdfFile ? 'document-text' : 'cloud-upload-outline'} size={32} color={BRAND_BLUE} />
@@ -290,10 +382,40 @@ export default function ResumeTab() {
                 )}
               </Pressable>
 
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#FFF7ED', borderRadius: 14, padding: 14 }}>
-                <Ionicons name="information-circle-outline" size={18} color={ORANGE} style={{ marginTop: 1 }} />
-                <Text style={{ flex: 1, color: ORANGE, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', lineHeight: 20 }}>
-                  PDF upload is coming soon. For now, use "Fill in my details" to build your profile.
+              {/* Upload button — shown when a file is picked but not yet uploaded */}
+              {pdfFile && resumeStatus !== 'uploading' && (
+                <Pressable
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); uploadPdf(); }}
+                  style={{ height: 52, backgroundColor: BRAND_BLUE, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}
+                >
+                  <Ionicons name="cloud-upload-outline" size={18} color={WHITE} />
+                  <Text style={{ color: WHITE, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>Upload PDF</Text>
+                </Pressable>
+              )}
+
+              {/* Uploading indicator */}
+              {resumeStatus === 'uploading' && (
+                <View style={{ height: 52, backgroundColor: '#93A5E0', borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 }}>
+                  <Ionicons name="time-outline" size={18} color={WHITE} />
+                  <Text style={{ color: WHITE, fontFamily: 'PlusJakartaSans_700Bold', fontSize: 15 }}>Uploading…</Text>
+                </View>
+              )}
+
+              {/* Remove button — shown when already uploaded */}
+              {resumeStatus === 'uploaded' && (
+                <Pressable
+                  onPress={handleDeleteResume}
+                  style={{ height: 48, backgroundColor: '#FEF2F2', borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, borderWidth: 1, borderColor: '#FECACA' }}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                  <Text style={{ color: '#EF4444', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>Remove resume</Text>
+                </Pressable>
+              )}
+
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: '#EBF0FF', borderRadius: 14, padding: 14 }}>
+                <Ionicons name="information-circle-outline" size={18} color={BRAND_BLUE} style={{ marginTop: 1 }} />
+                <Text style={{ flex: 1, color: BRAND_BLUE, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', lineHeight: 20 }}>
+                  Your resume will be reviewed by our admin team. Keep it updated for better visibility.
                 </Text>
               </View>
             </View>

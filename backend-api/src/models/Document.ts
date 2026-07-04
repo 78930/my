@@ -2,7 +2,7 @@ import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema } = mongoose;
 
-export const DOCUMENT_TYPES = ["AADHAAR", "PAN", "DRIVING_LICENSE", "BANK_PASSBOOK"] as const;
+export const DOCUMENT_TYPES = ["AADHAAR", "PAN", "DRIVING_LICENSE", "BANK_PASSBOOK", "RESUME_PDF"] as const;
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
 
 const documentSchema = new Schema(

@@ -53,6 +53,8 @@ export type AuthUser = {
   phone?: string;
   type: UserType;
   role: ApiRole;
+  photoBase64?: string | null;
+  photoMimeType?: string;
 };
 
 export type WorkerProfile = {

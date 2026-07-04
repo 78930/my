@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
@@ -20,6 +21,7 @@ import { ApiError } from '../../lib/api';
 import { languageLabels, supportedLanguages } from '../../lib/language';
 import { getFactoryProfile, updateFactoryProfile } from '../../services/factory';
 import { getWorkerProfile, updateWorkerProfile } from '../../services/workers';
+import { uploadProfilePhoto } from '../../services/auth';
 
 function parseCommaList(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
@@ -41,6 +43,10 @@ export default function ProfileTab() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(
+    user?.photoBase64 ? `data:${user.photoMimeType ?? 'image/jpeg'};base64,${user.photoBase64}` : null
+  );
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   const [fullName, setFullName] = useState('');
   const [headline, setHeadline] = useState('');
@@ -164,6 +170,37 @@ export default function ProfileTab() {
     }
   }
 
+  async function handlePickPhoto() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Allow photo library access to set a profile picture.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset.base64) { Alert.alert('Error', 'Could not read image.'); return; }
+    const mimeType = asset.mimeType ?? 'image/jpeg';
+    const uri = `data:${mimeType};base64,${asset.base64}`;
+    setPhotoUri(uri);
+    setPhotoUploading(true);
+    try {
+      await uploadProfilePhoto(token!, asset.base64, mimeType);
+      await refreshSession();
+    } catch {
+      Alert.alert('Upload failed', 'Could not save your profile photo. Please try again.');
+      setPhotoUri(user?.photoBase64 ? `data:${user.photoMimeType ?? 'image/jpeg'};base64,${user.photoBase64}` : null);
+    } finally {
+      setPhotoUploading(false);
+    }
+  }
+
   async function handleLogout() {
     await signOut();
     router.replace('/auth/welcome');
@@ -189,7 +226,12 @@ export default function ProfileTab() {
       {/* Header card */}
       <Card>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
-          <Avatar name={user.name || 'U'} size="md" />
+          <Pressable onPress={handlePickPhoto} style={{ position: 'relative' }}>
+            <Avatar name={user.name || 'U'} size="lg" imageUri={photoUri} />
+            <View style={{ position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: colors.background }}>
+              <Ionicons name={photoUploading ? 'time-outline' : 'camera'} size={11} color="#fff" />
+            </View>
+          </Pressable>
           <View style={{ flex: 1 }}>
             <Text variant="bodyLg">{user.name}</Text>
             <Text variant="caption" color="secondary">{user.phone || user.email || 'No contact info'}</Text>

@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.js";
 import UserModel from "../models/User.js";
 import WorkerProfileModel from "../models/WorkerProfile.js";
+import DocumentModel from "../models/Document.js";
 import { env } from "../config/env.js";
 import { hashPassword } from "../utils/password.js";
 
@@ -130,6 +131,45 @@ router.patch(
     }
 
     return res.json({ message: `Profile ${newStatus.toLowerCase()}.`, profile });
+  })
+);
+
+// GET /api/admin/workers/:workerId/documents — list all uploaded doc types for a worker
+router.get(
+  "/workers/:workerId/documents",
+  ...guard,
+  asyncHandler<AuthRequest>(async (req, res) => {
+    const { workerId } = req.params;
+    if (!mongoose.isValidObjectId(workerId)) {
+      return res.status(400).json({ message: "Invalid worker id." });
+    }
+    const profile = await WorkerProfileModel.findById(workerId, "user").lean();
+    if (!profile) return res.status(404).json({ message: "Worker profile not found." });
+
+    const docs = await DocumentModel.find({ user: profile.user })
+      .select("type mimeType updatedAt")
+      .sort({ updatedAt: -1 })
+      .lean();
+    return res.json({ items: docs });
+  })
+);
+
+// GET /api/admin/workers/:workerId/documents/:type — fetch one document with base64 for viewing
+router.get(
+  "/workers/:workerId/documents/:type",
+  ...guard,
+  asyncHandler<AuthRequest>(async (req, res) => {
+    const { workerId, type } = req.params;
+    if (!mongoose.isValidObjectId(workerId)) {
+      return res.status(400).json({ message: "Invalid worker id." });
+    }
+    const profile = await WorkerProfileModel.findById(workerId, "user").lean();
+    if (!profile) return res.status(404).json({ message: "Worker profile not found." });
+
+    const doc = await DocumentModel.findOne({ user: profile.user, type }).lean();
+    if (!doc) return res.status(404).json({ message: "Document not found." });
+
+    return res.json(doc);
   })
 );
 

@@ -32,7 +32,7 @@ function FilterChip({ label, active, onPress }: { label: string; active: boolean
 }
 
 export default function TalentTab() {
-  const [queryState, setQueryState] = useState<QueryState>({ area: 'Jeedimetla', role: 'Production Supervisor', shift: 'Any', search: '', page: 1 });
+  const [queryState, setQueryState] = useState<QueryState>({ area: '', role: '', shift: 'Any', search: '', page: 1 });
   const { area, role, shift, search, page } = queryState;
 
   const [items, setItems] = useState<Worker[]>([]);
@@ -107,6 +107,7 @@ export default function TalentTab() {
             <View style={{ gap: 10, paddingHorizontal: 20 }}>
               <Text style={{ color: '#475569', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' }}>Industrial Area</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                <FilterChip key="all-area" label="All" active={area === ''} onPress={() => setQueryState((q) => ({ ...q, area: '', page: 1 }))} />
                 {industrialAreas.map((item) => (
                   <FilterChip key={item} label={item} active={area === item} onPress={() => setQueryState((q) => ({ ...q, area: item, page: 1 }))} />
                 ))}
@@ -116,6 +117,7 @@ export default function TalentTab() {
             <View style={{ gap: 10, paddingHorizontal: 20 }}>
               <Text style={{ color: '#475569', fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' }}>Role</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                <FilterChip key="all-role" label="All" active={role === ''} onPress={() => setQueryState((q) => ({ ...q, role: '', page: 1 }))} />
                 {mostDemandingRoles.map((item) => (
                   <FilterChip key={item} label={item} active={role === item} onPress={() => setQueryState((q) => ({ ...q, role: item, page: 1 }))} />
                 ))}

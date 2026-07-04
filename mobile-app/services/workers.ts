@@ -36,7 +36,7 @@ export async function savePushToken(token: string, pushToken: string): Promise<v
   await apiRequest('/api/workers/me/push-token', { method: 'POST', token, body: { token: pushToken } });
 }
 
-export type DocumentType = 'AADHAAR' | 'PAN' | 'DRIVING_LICENSE' | 'BANK_PASSBOOK';
+export type DocumentType = 'AADHAAR' | 'PAN' | 'DRIVING_LICENSE' | 'BANK_PASSBOOK' | 'RESUME_PDF';
 
 export interface DocumentRecord {
   _id: string;
@@ -66,6 +66,21 @@ export async function uploadDocument(
 
 export async function deleteDocument(token: string, type: DocumentType): Promise<void> {
   await apiRequest(`/api/workers/me/documents/${type}`, { method: 'DELETE', token });
+}
+
+export async function uploadResumePdf(
+  token: string,
+  base64: string
+): Promise<{ id: string; type: string; uploadedAt: string }> {
+  return uploadDocument(token, 'RESUME_PDF', base64, 'application/pdf');
+}
+
+export async function getResumePdf(token: string): Promise<{ imageBase64: string; mimeType: string }> {
+  return getDocument(token, 'RESUME_PDF');
+}
+
+export async function deleteResumePdf(token: string): Promise<void> {
+  return deleteDocument(token, 'RESUME_PDF');
 }
 
 export async function updateWorkerProfile(
