@@ -6,6 +6,8 @@ import { requireAuth, requireRole, type AuthRequest } from "../middleware/auth.j
 import UserModel from "../models/User.js";
 import WorkerProfileModel from "../models/WorkerProfile.js";
 import DocumentModel from "../models/Document.js";
+import JobModel from "../models/Job.js";
+import ApplicationModel from "../models/Application.js";
 import { env } from "../config/env.js";
 import { hashPassword } from "../utils/password.js";
 import { sendPushToUser } from "../services/push.js";
@@ -61,6 +63,50 @@ router.post(
 
 // All routes below require a valid ADMIN JWT
 const guard = [requireAuth, requireRole("ADMIN")];
+
+// GET /api/admin/stats — platform-wide counts for the dashboard
+router.get(
+  "/stats",
+  ...guard,
+  asyncHandler<AuthRequest>(async (_req, res) => {
+    const [
+      totalWorkers,
+      totalFactories,
+      totalJobs,
+      openJobs,
+      totalApplications,
+      hired,
+      verificationCounts,
+    ] = await Promise.all([
+      UserModel.countDocuments({ role: "WORKER" }),
+      UserModel.countDocuments({ role: "FACTORY" }),
+      JobModel.countDocuments({}),
+      JobModel.countDocuments({ status: "OPEN" }),
+      ApplicationModel.countDocuments({}),
+      ApplicationModel.countDocuments({ status: "HIRED" }),
+      WorkerProfileModel.aggregate([
+        { $group: { _id: "$verificationStatus", count: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const verifications: Record<string, number> = {
+      UNVERIFIED: 0, PENDING: 0, VERIFIED: 0, REJECTED: 0,
+    };
+    for (const row of verificationCounts as { _id: string; count: number }[]) {
+      if (row._id in verifications) verifications[row._id] = row.count;
+    }
+
+    return res.json({
+      totalWorkers,
+      totalFactories,
+      totalJobs,
+      openJobs,
+      totalApplications,
+      hired,
+      verifications,
+    });
+  })
+);
 
 // GET /api/admin/verifications?status=PENDING&page=1&limit=20
 // Returns worker profiles filtered by verificationStatus, enriched with user phone.
