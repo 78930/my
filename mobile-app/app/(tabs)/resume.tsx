@@ -126,27 +126,18 @@ export default function ResumeTab() {
     if (!pdfFile?.uri || !token) return;
     setResumeStatus('uploading');
     try {
-      // XHR with arraybuffer is the only reliable way to read a local file URI
-      // on Android without expo-file-system. copyToCacheDirectory ensures we
-      // get a file:// URI that React Native's network layer can open.
+      const fetchResp = await fetch(pdfFile.uri);
+      const blob = await fetchResp.blob();
       const base64 = await new Promise<string>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.responseType = 'arraybuffer';
-        xhr.onload = () => {
-          const bytes = new Uint8Array(xhr.response as ArrayBuffer);
-          let binary = '';
-          const CHUNK = 1024;
-          for (let i = 0; i < bytes.length; i += CHUNK) {
-            binary += String.fromCharCode.apply(
-              null,
-              bytes.subarray(i, Math.min(i + CHUNK, bytes.length)) as unknown as number[]
-            );
-          }
-          resolve(btoa(binary));
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          // dataUrl is "data:application/pdf;base64,BASE64..."
+          const comma = dataUrl.indexOf(',');
+          resolve(comma !== -1 ? dataUrl.slice(comma + 1) : dataUrl);
         };
-        xhr.onerror = () => reject(new Error('Could not read file'));
-        xhr.open('GET', pdfFile!.uri, true);
-        xhr.send();
+        reader.onerror = () => reject(new Error('FileReader failed'));
+        reader.readAsDataURL(blob);
       });
       const result = await uploadResumePdf(token, base64);
       setResumeStatus('uploaded');

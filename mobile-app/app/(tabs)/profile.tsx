@@ -20,7 +20,8 @@ import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
 import { languageLabels, supportedLanguages } from '../../lib/language';
 import { getFactoryProfile, updateFactoryProfile } from '../../services/factory';
-import { getWorkerProfile, updateWorkerProfile } from '../../services/workers';
+import { getWorkerProfile, updateWorkerProfile, requestVerification } from '../../services/workers';
+import type { VerificationStatus } from '../../types';
 import { uploadProfilePhoto } from '../../services/auth';
 
 function parseCommaList(value: string) {
@@ -59,6 +60,9 @@ export default function ProfileTab() {
   const [preferredRoles, setPreferredRoles] = useState<string[]>([]);
   const [preferredShiftsText, setPreferredShiftsText] = useState('General, Rotational');
   const [isOpenToWork, setIsOpenToWork] = useState(true);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>('UNVERIFIED');
+  const [verificationNote, setVerificationNote] = useState('');
+  const [requestingVerif, setRequestingVerif] = useState(false);
 
   const [companyName, setCompanyName] = useState('');
   const [hrName, setHrName] = useState('');
@@ -99,6 +103,8 @@ export default function ProfileTab() {
           setPreferredRoles(profile.preferredRoles || []);
           setPreferredShiftsText((profile.preferredShifts || []).join(', '));
           setIsOpenToWork(profile.isOpenToWork ?? true);
+          setVerificationStatus((profile.verificationStatus as VerificationStatus) ?? 'UNVERIFIED');
+          setVerificationNote(profile.verificationNote ?? '');
         } else if (isFactory) {
           const profile = await getFactoryProfile(token);
           if (cancelled) return;
@@ -201,6 +207,20 @@ export default function ProfileTab() {
     }
   }
 
+  async function handleRequestVerification() {
+    if (!token) return;
+    setRequestingVerif(true);
+    try {
+      const res = await requestVerification(token);
+      setVerificationStatus(res.verificationStatus as VerificationStatus);
+      Alert.alert('Submitted', res.message);
+    } catch (err: any) {
+      Alert.alert('Already submitted', err?.message ?? 'Could not submit. Try again.');
+    } finally {
+      setRequestingVerif(false);
+    }
+  }
+
   async function handleLogout() {
     await signOut();
     router.replace('/auth/welcome');
@@ -233,7 +253,12 @@ export default function ProfileTab() {
             </View>
           </Pressable>
           <View style={{ flex: 1 }}>
-            <Text variant="bodyLg">{user.name}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text variant="bodyLg">{user.name}</Text>
+              {isWorker && verificationStatus === 'VERIFIED' && (
+                <Ionicons name="shield-checkmark" size={16} color="#D97706" />
+              )}
+            </View>
             <Text variant="caption" color="secondary">{user.phone || user.email || 'No contact info'}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
@@ -377,6 +402,61 @@ export default function ProfileTab() {
               placeholder="e.g. General, Rotational"
               leftIcon="swap-horizontal-outline"
             />
+          </Card>
+
+          {/* Verification status */}
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
+              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: verificationStatus === 'VERIFIED' ? '#FEF3C7' : verificationStatus === 'PENDING' ? '#F1F5F9' : verificationStatus === 'REJECTED' ? '#FEF2F2' : '#EBF0FF', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons
+                  name={verificationStatus === 'VERIFIED' ? 'shield-checkmark' : verificationStatus === 'PENDING' ? 'time-outline' : verificationStatus === 'REJECTED' ? 'close-circle-outline' : 'shield-outline'}
+                  size={18}
+                  color={verificationStatus === 'VERIFIED' ? '#D97706' : verificationStatus === 'PENDING' ? '#64748B' : verificationStatus === 'REJECTED' ? '#EF4444' : '#1240C7'}
+                />
+              </View>
+              <Text variant="h3">Profile Verification</Text>
+            </View>
+
+            {verificationStatus === 'VERIFIED' && (
+              <View style={{ backgroundColor: '#FEF3C7', borderRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Ionicons name="checkmark-circle" size={22} color="#D97706" />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyLg" style={{ color: '#92400E' }}>Profile Verified ✓</Text>
+                  <Text variant="caption" style={{ color: '#B45309', marginTop: 2 }}>Your identity has been verified by Sketu admin. A gold badge appears on your public profile.</Text>
+                </View>
+              </View>
+            )}
+
+            {verificationStatus === 'PENDING' && (
+              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Ionicons name="time-outline" size={22} color="#94A3B8" />
+                <View style={{ flex: 1 }}>
+                  <Text variant="bodyLg">Under Review</Text>
+                  <Text variant="caption" color="secondary" style={{ marginTop: 2 }}>Admin is reviewing your documents. You'll be notified when it's done.</Text>
+                </View>
+              </View>
+            )}
+
+            {verificationStatus === 'REJECTED' && (
+              <>
+                <View style={{ backgroundColor: '#FEF2F2', borderRadius: 14, padding: spacing.md, flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, marginBottom: spacing.md }}>
+                  <Ionicons name="close-circle-outline" size={22} color="#EF4444" />
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyLg" style={{ color: '#991B1B' }}>Verification Rejected</Text>
+                    {verificationNote ? <Text variant="caption" style={{ color: '#B91C1C', marginTop: 2 }}>{verificationNote}</Text> : null}
+                  </View>
+                </View>
+                <Button label={requestingVerif ? 'Submitting…' : 'Request Again'} onPress={handleRequestVerification} variant="secondary" fullWidth loading={requestingVerif} />
+              </>
+            )}
+
+            {verificationStatus === 'UNVERIFIED' && (
+              <>
+                <Text variant="body" color="secondary">Get a gold verified badge on your profile. Upload your Aadhaar or PAN in the Documents tab, then request verification.</Text>
+                <Spacer size="md" />
+                <Button label={requestingVerif ? 'Submitting…' : 'Request Verification'} onPress={handleRequestVerification} variant="primary" fullWidth loading={requestingVerif} leftIcon="shield-checkmark-outline" />
+              </>
+            )}
           </Card>
 
           {/* Skills and certifications */}

@@ -11,8 +11,48 @@ import ApplicationModel from "../models/Application.js";
 import { env } from "../config/env.js";
 import { hashPassword } from "../utils/password.js";
 import { sendPushToUser } from "../services/push.js";
+import { signAccessToken } from "../utils/jwt.js";
 
 const router = Router();
+
+// POST /api/admin/login — admin login with phone + ADMIN_SECRET (no OTP needed)
+router.post(
+  "/login",
+  asyncHandler(async (req, res) => {
+    if (!env.adminSecret) {
+      return res.status(503).json({ message: "Admin login is disabled." });
+    }
+
+    const { phone: rawPhone, secret } = z
+      .object({
+        phone: z.string().min(10),
+        secret: z.string().min(1),
+      })
+      .parse(req.body);
+
+    if (secret !== env.adminSecret) {
+      return res.status(403).json({ message: "Invalid admin secret." });
+    }
+
+    const phone = rawPhone.replace(/\D/g, "").slice(-10);
+    const user = await UserModel.findOne({ phone, role: "ADMIN" });
+
+    if (!user) {
+      return res.status(404).json({ message: "No admin account found for this phone. Run bootstrap first." });
+    }
+
+    const token = signAccessToken({
+      sub: String(user._id),
+      role: user.role,
+      email: user.email,
+    });
+
+    return res.json({
+      token,
+      user: { id: user._id, role: user.role, email: user.email, phone: user.phone, name: user.name },
+    });
+  })
+);
 
 // POST /api/admin/bootstrap
 // Creates the first admin user. Requires ADMIN_SECRET env var.

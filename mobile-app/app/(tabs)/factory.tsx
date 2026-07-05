@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
-import { FactoryDashboardSummary } from '../../types';
-import { getFactoryDashboard } from '../../services/factory';
+import { FactoryDashboardSummary, JobApplication } from '../../types';
+import { getFactoryDashboard, listFactoryJobs } from '../../services/factory';
+import { listJobApplications } from '../../services/applications';
 
 const BRAND_BLUE = '#1240C7';
 const ORANGE = '#FF8C00';
@@ -50,20 +51,40 @@ function ActionRow({ icon, iconBg, iconColor, title, subtitle, onPress }: {
 
 export default function FactoryTab() {
   const { user, token, isFactory, signOut } = useAuth();
-  const [summary, setSummary] = useState<FactoryDashboardSummary>(initialSummary);
-  const [loading, setLoading] = useState(true);
+  const [summary, setSummary]       = useState<FactoryDashboardSummary>(initialSummary);
+  const [loading, setLoading]       = useState(true);
+  const [recentApps, setRecentApps] = useState<JobApplication[]>([]);
+  const [loadingApps, setLoadingApps] = useState(true);
   const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!token || !isFactory) { setLoading(false); return; }
+      if (!token || !isFactory) { setLoading(false); setLoadingApps(false); return; }
       setLoading(true);
+      setLoadingApps(true);
       try {
-        const data = await getFactoryDashboard(token);
-        if (!cancelled) setSummary(data);
+        const [dashData, jobs] = await Promise.all([
+          getFactoryDashboard(token),
+          listFactoryJobs(token),
+        ]);
+        if (cancelled) return;
+        setSummary(dashData);
+
+        if (jobs.length > 0) {
+          const appsArrays = await Promise.all(
+            jobs.slice(0, 3).map((j) => listJobApplications(token, j.id))
+          );
+          if (!cancelled) {
+            const flat = appsArrays.flat()
+              .filter((a) => a.status === 'APPLIED' || a.status === 'SHORTLISTED')
+              .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0).getTime() - new Date(a.updatedAt || a.createdAt || 0).getTime())
+              .slice(0, 5);
+            setRecentApps(flat);
+          }
+        }
       } catch { /* show zeros */ } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) { setLoading(false); setLoadingApps(false); }
       }
     }
     load();
@@ -134,6 +155,63 @@ export default function FactoryTab() {
             <ActionRow icon="list-outline" iconBg="#F0FDF4" iconColor="#22C55E" title="My jobs" subtitle="View, close or reopen your posted openings" onPress={() => router.push('/factory/my-jobs' as never)} />
             <ActionRow icon="people-outline" iconBg="#EFF6FF" iconColor="#60A5FA" title="Search talent" subtitle="Browse live job seeker profiles by area & role" onPress={() => router.push('/(tabs)/talent')} />
             <ActionRow icon="business-outline" iconBg="#F8FAFC" iconColor="#475569" title="Company profile" subtitle="Update employer details, location and contact info" onPress={() => router.push('/(tabs)/profile')} />
+
+            {/* Recent applicants */}
+            <View style={{ marginTop: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ color: '#0F172A', fontSize: 17, fontFamily: 'PlusJakartaSans_700Bold' }}>Recent applicants</Text>
+                <Pressable onPress={() => { Haptics.selectionAsync(); router.push('/factory/pipeline' as never); }}>
+                  <Text style={{ color: BRAND_BLUE, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold' }}>See all</Text>
+                </Pressable>
+              </View>
+
+              {loadingApps ? (
+                <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                  <ActivityIndicator color={BRAND_BLUE} />
+                </View>
+              ) : recentApps.length === 0 ? (
+                <Pressable
+                  onPress={() => { Haptics.selectionAsync(); router.push('/factory/post-job' as never); }}
+                  style={{ backgroundColor: WHITE, borderRadius: 16, padding: 18, alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E2E8F0' }}
+                >
+                  <Ionicons name="people-outline" size={28} color="#CBD5E1" />
+                  <Text style={{ color: '#64748B', fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium' }}>
+                    {summary.openJobs === 0 ? 'Post a job to receive applicants' : 'No new applicants yet'}
+                  </Text>
+                </Pressable>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {recentApps.map((app) => {
+                    const isNew = app.status === 'APPLIED';
+                    const workerName = app.worker?.fullName || app.worker?.name || 'Applicant';
+                    const jobTitle = app.job?.title || app.job?.role || 'a role';
+                    return (
+                      <Pressable
+                        key={app.id}
+                        onPress={() => { Haptics.selectionAsync(); router.push(`/factory/application/${app.id}?jobId=${app.jobId}` as never); }}
+                        style={{ backgroundColor: WHITE, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: isNew ? BRAND_BLUE + '33' : '#E2E8F0' }}
+                      >
+                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: isNew ? '#EBF0FF' : '#FFF7ED', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Ionicons name={isNew ? 'person-add-outline' : 'star-outline'} size={18} color={isNew ? BRAND_BLUE : ORANGE} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: '#0F172A', fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold' }} numberOfLines={1}>{workerName}</Text>
+                          <Text style={{ color: '#64748B', fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2 }} numberOfLines={1}>
+                            {isNew ? 'Applied for' : 'Shortlisted ·'} {jobTitle}
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: isNew ? '#EBF0FF' : '#FFF7ED', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                          <Text style={{ color: isNew ? BRAND_BLUE : ORANGE, fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold' }}>
+                            {isNew ? 'New' : 'Shortlisted'}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
           </View>
         </ScrollView>
       </SafeAreaView>
