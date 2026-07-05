@@ -8,6 +8,7 @@ import WorkerProfileModel from "../models/WorkerProfile.js";
 import DocumentModel from "../models/Document.js";
 import { env } from "../config/env.js";
 import { hashPassword } from "../utils/password.js";
+import { sendPushToUser } from "../services/push.js";
 
 const router = Router();
 
@@ -85,13 +86,22 @@ router.get(
     ]);
 
     const userIds = profiles.map((p) => p.user);
-    const users = await UserModel.find({ _id: { $in: userIds } }, "phone name").lean();
+    const [users, docCounts] = await Promise.all([
+      UserModel.find({ _id: { $in: userIds } }, "phone name pushToken").lean(),
+      DocumentModel.aggregate([
+        { $match: { user: { $in: userIds } } },
+        { $group: { _id: "$user", count: { $sum: 1 }, types: { $push: "$type" } } },
+      ]),
+    ]);
     const userMap = new Map(users.map((u) => [String(u._id), u]));
+    const docMap = new Map(docCounts.map((d: any) => [String(d._id), { count: d.count, types: d.types }]));
 
     const enriched = profiles.map((p) => ({
       ...p,
       userPhone: userMap.get(String(p.user))?.phone ?? null,
       userName: userMap.get(String(p.user))?.name ?? null,
+      docCount: docMap.get(String(p.user))?.count ?? 0,
+      docTypes: docMap.get(String(p.user))?.types ?? [],
     }));
 
     const totalPages = Math.ceil(total / limit);
@@ -128,6 +138,17 @@ router.patch(
 
     if (!profile) {
       return res.status(404).json({ message: "Worker profile not found." });
+    }
+
+    const workerUser = await UserModel.findById(profile.user, "pushToken").lean();
+    if (workerUser?.pushToken) {
+      const title = action === "APPROVE" ? "Profile Verified!" : "Verification Update";
+      const body = action === "APPROVE"
+        ? "Your profile has been verified. You can now apply to jobs with a verified badge."
+        : note
+          ? `Your verification was not approved. Reason: ${note}`
+          : "Your verification was not approved. Please update your profile and try again.";
+      await sendPushToUser(workerUser.pushToken as string, title, body, { screen: "profile" });
     }
 
     return res.json({ message: `Profile ${newStatus.toLowerCase()}.`, profile });
