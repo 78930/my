@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomInt } from "crypto";
 import { z } from "zod";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import UserModel from "../models/User.js";
@@ -92,24 +93,7 @@ router.post(
 
     const existing = await UserModel.findOne({ phone, role: input.role });
     if (existing) {
-      existing.name = name;
-      await existing.save();
-
-      if (input.role === "WORKER") {
-        await WorkerProfileModel.findOneAndUpdate(
-          { user: existing._id },
-          { fullName: name },
-          { upsert: true, setDefaultsOnInsert: true }
-        );
-      } else {
-        await FactoryProfileModel.findOneAndUpdate(
-          { user: existing._id },
-          { companyName: name, hrName: name },
-          { upsert: true, setDefaultsOnInsert: true }
-        );
-      }
-
-      return res.status(200).json(createAuthResponse(existing));
+      return res.status(409).json({ message: "An account with this phone number already exists. Please log in instead." });
     }
 
     const user = await UserModel.create({
@@ -201,7 +185,7 @@ router.post(
       return res.json(genericResponse);
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String(randomInt(100000, 1000000));
     otpStore.set(phone, {
       code,
       attempts: 0,
@@ -287,10 +271,11 @@ router.post(
   "/me/photo",
   requireAuth,
   asyncHandler<AuthRequest>(async (req, res) => {
+    const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
     const { photoBase64, mimeType } = z
       .object({
-        photoBase64: z.string().min(100),
-        mimeType: z.string().default("image/jpeg"),
+        photoBase64: z.string().min(100).max(10_000_000),
+        mimeType: z.enum(ALLOWED_IMAGE_TYPES).default("image/jpeg"),
       })
       .parse(req.body);
 

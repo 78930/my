@@ -135,6 +135,10 @@ router.post(
       return res.status(403).json({ message: "Not allowed" });
     }
 
+    if (application.status === "HIRED") {
+      return res.status(409).json({ message: "Cannot shortlist an already hired applicant." });
+    }
+
     application.status = "SHORTLISTED";
     await application.save();
 
@@ -168,6 +172,10 @@ router.post(
     const job = await JobModel.findOne({ _id: application.job, factoryUser: req.user!.id });
     if (!job) {
       return res.status(403).json({ message: "Not allowed" });
+    }
+
+    if (application.status === "REJECTED") {
+      return res.status(409).json({ message: "Cannot hire a rejected applicant. Shortlist them first." });
     }
 
     application.status = "HIRED";

@@ -213,10 +213,15 @@ router.post(
       return res.status(404).json({ message: "Worker profile not found" });
     }
 
-    // Upsert: create application if none exists, then set status to SHORTLISTED
+    // Upsert: create application if none exists, then set status to SHORTLISTED.
+    // Use $set so an existing HIRED status is never silently overwritten.
+    const existing = await ApplicationModel.findOne({ job: id, workerUser: workerProfile.user });
+    if (existing && existing.status === "HIRED") {
+      return res.status(409).json({ message: "This worker is already hired for this job." });
+    }
     const application = await ApplicationModel.findOneAndUpdate(
       { job: id, workerUser: workerProfile.user },
-      { job: id, workerUser: workerProfile.user, status: "SHORTLISTED", note: "" },
+      { $set: { status: "SHORTLISTED" }, $setOnInsert: { job: id, workerUser: workerProfile.user, note: "" } },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 

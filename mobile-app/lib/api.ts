@@ -44,6 +44,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       ...(options.headers || {}),
     },
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    signal: AbortSignal.timeout(30_000),
   });
 
   const text = await response.text();

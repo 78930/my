@@ -164,8 +164,8 @@ export default function HomeTab() {
     }
     load();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWorker, token]);
+  // workerProfile fields are intentionally included so the feed re-fetches when preferred areas/roles change
+  }, [isWorker, token, workerProfile?.preferredAreas?.[0], workerProfile?.preferredRoles?.[0]]);
 
   const shortlistedCount = apps.filter((a) => a.status === 'SHORTLISTED').length;
   const hiredCount       = apps.filter((a) => a.status === 'HIRED').length;

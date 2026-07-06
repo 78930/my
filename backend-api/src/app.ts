@@ -29,8 +29,9 @@ app.use(
 );
 app.use(express.json({ limit: "10mb" }));
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
-const otpLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 5, standardHeaders: true, legacyHeaders: false });
+const authLimiter  = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const otpLimiter   = rateLimit({ windowMs: 10 * 60 * 1000, max: 5,  standardHeaders: true, legacyHeaders: false });
+const adminLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "sketu-backend", authVersion: 2 });
@@ -43,7 +44,7 @@ app.use("/api/workers", workerRoutes);
 app.use("/api/factories", factoryRoutes);
 app.use("/api/jobs", jobRoutes);
 app.use("/api/applications", applicationRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminLimiter, adminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

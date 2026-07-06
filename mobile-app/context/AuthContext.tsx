@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
     registerForPushNotifications().then((pushToken) => {
       if (pushToken) savePushToken(token, pushToken).catch(() => {});
-    });
+    }).catch(() => {});
   }, [token]);
 
   const signIn = useCallback(async (payload: { role: UserType; name: string; phone: string }) => {
