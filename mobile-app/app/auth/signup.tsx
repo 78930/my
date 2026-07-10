@@ -51,7 +51,7 @@ function PillChip({ label, active, onPress }: { label: string; active: boolean; 
 function Field({
   icon, placeholder, value, onChangeText,
   keyboardType = 'default', autoCapitalize = 'none',
-  maxLength, multiline, numberOfLines,
+  maxLength, multiline, numberOfLines, secureTextEntry, suffix,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   placeholder: string;
@@ -62,6 +62,8 @@ function Field({
   maxLength?: number;
   multiline?: boolean;
   numberOfLines?: number;
+  secureTextEntry?: boolean;
+  suffix?: React.ReactNode;
 }) {
   const [focused, setFocused] = useState(false);
   return (
@@ -90,6 +92,7 @@ function Field({
         maxLength={maxLength}
         multiline={multiline}
         numberOfLines={numberOfLines}
+        secureTextEntry={secureTextEntry}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         style={{
@@ -102,6 +105,7 @@ function Field({
           minHeight: multiline ? 80 : undefined,
         }}
       />
+      {suffix}
     </View>
   );
 }
@@ -127,6 +131,8 @@ export default function SignupScreen() {
   const [customArea, setCustomArea] = useState('');
   const [customRole, setCustomRole] = useState('');
   const [description, setDescription] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   const finalArea = selectedArea === 'Others' ? customArea.trim() : selectedArea;
@@ -137,12 +143,13 @@ export default function SignupScreen() {
     const nameVal = isFactory ? companyName.trim() || hrName.trim() : fullName.trim();
     if (nameVal.length < 2) { setError('Please enter your full name.'); return; }
     if (phone.trim().replace(/\D/g, '').length < 10) { setError('Please enter a valid 10-digit phone number.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (selectedArea === 'Others' && !customArea.trim()) { setError('Please enter your industrial area.'); return; }
     if (!isFactory && selectedRole === 'Others' && !customRole.trim()) { setError('Please enter your primary role.'); return; }
 
     try {
       if (isFactory) {
-        const token = await signUpFactory({ name: companyName.trim() || hrName.trim(), phone });
+        const token = await signUpFactory({ name: companyName.trim() || hrName.trim(), phone, password });
         try {
           await updateFactoryProfile(token, {
             companyName: companyName.trim(),
@@ -151,7 +158,7 @@ export default function SignupScreen() {
           });
         } catch { /* non-fatal */ }
       } else {
-        const token = await signUpWorker({ name: fullName.trim(), phone });
+        const token = await signUpWorker({ name: fullName.trim(), phone, password });
         if (token) {
           try {
             await updateWorkerProfile(token, {
@@ -239,6 +246,20 @@ export default function SignupScreen() {
                     style={{ flex: 1, fontSize: 15, fontFamily: 'PlusJakartaSans_500Medium', color: '#1E293B', paddingVertical: 0 }}
                   />
                 </View>
+
+                {/* Password */}
+                <Field
+                  icon="lock-closed-outline"
+                  placeholder="Create a password (min 6 chars)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  suffix={
+                    <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#94A3B8" />
+                    </Pressable>
+                  }
+                />
               </View>
 
               {/* Area section */}

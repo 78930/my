@@ -17,7 +17,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../../components/ui/Text';
 import { useAuth } from '../../context/AuthContext';
 import { ApiError } from '../../lib/api';
-import { UserType } from '../../types';
 
 const BRAND_BLUE = '#1240C7';
 const ICON_BLUE = '#5B8DFF';
@@ -58,6 +57,7 @@ function Field({
   focused,
   onFocus,
   onBlur,
+  secureTextEntry,
 }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   placeholder: string;
@@ -72,6 +72,7 @@ function Field({
   focused: boolean;
   onFocus: () => void;
   onBlur: () => void;
+  secureTextEntry?: boolean;
 }) {
   return (
     <View
@@ -97,6 +98,7 @@ function Field({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         maxLength={maxLength}
+        secureTextEntry={secureTextEntry}
         onFocus={onFocus}
         onBlur={onBlur}
         style={{
@@ -194,14 +196,16 @@ function SocialButton({ icon, label, color, bg, onPress }: {
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function WelcomeScreen() {
-  const { signIn, requestOtp, signInWithOtp } = useAuth();
+  const { requestOtp, signInWithOtp, signIn } = useAuth();
 
   const [role, setRole] = useState<Role>('worker');
   const [method, setMethod] = useState<LoginMethod>('name');
 
-  // Name + Number fields
-  const [name, setName] = useState('');
+  // Name+password login fields
+  const [nameValue, setNameValue] = useState('');
   const [namePhone, setNamePhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // OTP fields
   const [otpPhone, setOtpPhone] = useState('');
@@ -229,17 +233,19 @@ export default function WelcomeScreen() {
     Animated.timing(otpOpacity, { toValue: otpStep !== 'idle' ? 1 : 0, duration: 240, useNativeDriver: true }).start();
   }, [otpStep]);
 
-  // ── Name + Number login ──
+  // ── Name + password login ──
   async function handleNameLogin() {
     setError('');
-    if (name.trim().length < 2) { setError('Please enter your full name.'); return; }
-    if (namePhone.trim().replace(/\D/g, '').length < 10) { setError('Please enter a valid 10-digit phone number.'); return; }
+    const trimmedPhone = namePhone.trim().replace(/\D/g, '');
+    if (nameValue.trim().length < 2) { setError('Please enter your name.'); return; }
+    if (trimmedPhone.length < 10) { setError('Please enter a valid 10-digit phone number.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setLoading(true);
     try {
-      await signIn({ role: role as UserType, name: name.trim(), phone: namePhone.trim() });
+      await signIn({ role, name: nameValue.trim(), phone: trimmedPhone, password });
       router.replace('/(tabs)');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Login failed. Please try again.');
+      setError(err instanceof ApiError ? err.message : 'Login failed. Please check your details.');
     } finally {
       setLoading(false);
     }
@@ -285,14 +291,6 @@ export default function WelcomeScreen() {
     }
   }
 
-  function handleMethodChange(m: LoginMethod) {
-    setMethod(m);
-    setError('');
-    setOtpStep('idle');
-    setOtp('');
-    setCooldown(0);
-  }
-
   const isLoading = loading || sending;
   const otpCtaLabel = otpStep === 'idle' ? 'Send OTP' : 'Login / Continue';
 
@@ -300,9 +298,10 @@ export default function WelcomeScreen() {
     { value: 'worker' as Role,  label: 'Job Seeker', icon: 'person-outline' as const },
     { value: 'factory' as Role, label: 'Employer',   icon: 'business-outline' as const },
   ];
+
   const METHOD_OPTIONS = [
-    { value: 'name' as LoginMethod, label: 'Name & Number', icon: 'person-circle-outline' as const },
-    { value: 'otp'  as LoginMethod, label: 'OTP Login',     icon: 'shield-checkmark-outline' as const },
+    { value: 'name' as LoginMethod, label: 'Name & Number', icon: 'lock-closed-outline' as const },
+    { value: 'otp'  as LoginMethod, label: 'OTP',           icon: 'shield-checkmark-outline' as const },
   ];
 
   return (
@@ -357,7 +356,7 @@ export default function WelcomeScreen() {
                   <Text variant="h1" style={{ color: BRAND_BLUE, fontSize: 22 }}>Sketu</Text>
                 </View>
                 <Text variant="body" style={{ color: '#64748B', fontSize: 13 }}>
-                  Choose how you'd like to log in below
+                  Choose your role and sign in
                 </Text>
               </View>
 
@@ -365,21 +364,22 @@ export default function WelcomeScreen() {
               <TabBar options={ROLE_OPTIONS} active={role} onSelect={setRole} />
 
               {/* Login method tabs */}
-              <TabBar options={METHOD_OPTIONS} active={method} onSelect={handleMethodChange} />
+              <TabBar options={METHOD_OPTIONS} active={method} onSelect={(m) => { setMethod(m); setError(''); }} />
 
-              {/* ── Name & Number form ─────────────────────────── */}
-              {method === 'name' ? (
+              {/* ── Name + password form ───────────────────────── */}
+              {method === 'name' && (
                 <View style={{ gap: 14 }}>
                   <Field
                     icon="person-outline"
                     placeholder="Your full name"
-                    value={name}
-                    onChangeText={setName}
+                    value={nameValue}
+                    onChangeText={setNameValue}
                     autoCapitalize="words"
-                    focused={focused === 'name'}
-                    onFocus={() => setFocused('name')}
+                    focused={focused === 'nameValue'}
+                    onFocus={() => setFocused('nameValue')}
                     onBlur={() => setFocused('')}
                   />
+
                   <Field
                     icon="call-outline"
                     placeholder="Mobile number"
@@ -395,6 +395,22 @@ export default function WelcomeScreen() {
                         <Text style={{ color: '#1E293B', fontFamily: 'PlusJakartaSans_600SemiBold', fontSize: 14 }}>+91</Text>
                         <Ionicons name="chevron-down" size={12} color="#94A3B8" />
                       </View>
+                    }
+                  />
+
+                  <Field
+                    icon="lock-closed-outline"
+                    placeholder="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    focused={focused === 'password'}
+                    onFocus={() => setFocused('password')}
+                    onBlur={() => setFocused('')}
+                    suffix={
+                      <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
+                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#94A3B8" />
+                      </Pressable>
                     }
                   />
 
@@ -418,11 +434,11 @@ export default function WelcomeScreen() {
                     )}
                   </Pressable>
                 </View>
-              ) : null}
+              )}
 
               {/* ── OTP form ───────────────────────────────────── */}
-              {method === 'otp' ? (
-                <View style={{ gap: 14 }}>
+              {method === 'otp' && (
+              <View style={{ gap: 14 }}>
                   <Field
                     icon="call-outline"
                     placeholder="Mobile number"
@@ -499,7 +515,7 @@ export default function WelcomeScreen() {
                     )}
                   </Pressable>
                 </View>
-              ) : null}
+              )}
 
               {/* Sign-up link */}
               <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>

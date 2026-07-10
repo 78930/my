@@ -1,5 +1,5 @@
 /** @type {import('expo/config').ExpoConfig} */
-const BACKEND_URL = 'http://192.168.1.8:5000';
+const BACKEND_URL = 'https://my-1-1iz4.onrender.com';
 const apiBaseUrl = (process.env.EXPO_PUBLIC_API_BASE_URL || BACKEND_URL).trim().replace(/\/$/, '');
 
 module.exports = {

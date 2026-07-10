@@ -5,6 +5,7 @@ import { AuthUser, FactoryProfile, UserType, WorkerProfile } from '../types';
 export type SimpleRegisterPayload = {
   name: string;
   phone: string;
+  password: string;
 };
 
 export type SessionPayload = {
@@ -19,15 +20,14 @@ export type OtpRequestResponse = {
   otpCode?: string;
 };
 
-export async function login(payload: { role: UserType; name: string; phone: string }): Promise<SessionPayload> {
+export async function login(payload: { role: UserType; name: string; phone: string; password: string }): Promise<SessionPayload> {
   const auth = await apiRequest<{ token: string; user: { id: string; email: string; phone?: string; role: 'WORKER' | 'FACTORY' } }>(
     '/api/auth/login',
     {
       method: 'POST',
       body: {
-        role: payload.role === 'factory' ? 'FACTORY' : 'WORKER',
-        name: payload.name,
         phone: payload.phone,
+        password: payload.password,
       },
     }
   );
@@ -73,6 +73,7 @@ export async function registerWorker(payload: SimpleRegisterPayload): Promise<Se
         role: 'WORKER',
         name: payload.name,
         phone: payload.phone,
+        password: payload.password,
       },
     }
   );
@@ -94,6 +95,7 @@ export async function registerFactory(payload: SimpleRegisterPayload): Promise<S
         role: 'FACTORY',
         name: payload.name,
         phone: payload.phone,
+        password: payload.password,
       },
     }
   );

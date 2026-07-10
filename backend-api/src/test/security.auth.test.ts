@@ -19,7 +19,8 @@ import {
   jest,
 } from "@jest/globals";
 
-let request: typeof import("supertest").default;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let request: (app: import("express").Express) => any;
 let app: import("express").Express;
 let db: typeof import("./db.js");
 

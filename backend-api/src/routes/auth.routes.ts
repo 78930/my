@@ -5,7 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import UserModel from "../models/User.js";
 import WorkerProfileModel from "../models/WorkerProfile.js";
 import FactoryProfileModel from "../models/FactoryProfile.js";
-import { hashPassword } from "../utils/password.js";
+import { hashPassword, verifyPassword } from "../utils/password.js";
 import { signAccessToken } from "../utils/jwt.js";
 import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 import { env } from "../config/env.js";
@@ -25,18 +25,19 @@ const registerSchema = z.discriminatedUnion("role", [
     role: z.literal("WORKER"),
     name: z.string().trim().min(2, "Name must be at least 2 characters"),
     phone: phoneSchema,
+    password: z.string().min(6, "Password must be at least 6 characters"),
   }),
   z.object({
     role: z.literal("FACTORY"),
     name: z.string().trim().min(2, "Name must be at least 2 characters"),
     phone: phoneSchema,
+    password: z.string().min(6, "Password must be at least 6 characters"),
   }),
 ]);
 
 const loginSchema = z.object({
-  role: z.enum(["WORKER", "FACTORY"]),
-  name: z.string().trim().min(2, "Name must be at least 2 characters"),
   phone: phoneSchema,
+  password: z.string().min(1, "Password is required"),
 });
 
 const requestOtpSchema = z.object({
@@ -56,10 +57,6 @@ function normalizePhone(phone: string) {
   if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2);
   if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1);
   return digits;
-}
-
-function normalizeName(name: string) {
-  return name.trim().toLowerCase();
 }
 
 function buildAccountEmail(phone: string, role: "WORKER" | "FACTORY") {
@@ -91,7 +88,7 @@ router.post(
     const phone = normalizePhone(input.phone);
     const name = input.name.trim();
 
-    const existing = await UserModel.findOne({ phone, role: input.role });
+    const existing = await UserModel.findOne({ phone });
     if (existing) {
       return res.status(409).json({ message: "An account with this phone number already exists. Please log in instead." });
     }
@@ -100,7 +97,7 @@ router.post(
       name,
       email: buildAccountEmail(phone, input.role),
       phone,
-      passwordHash: await hashPassword(phone),
+      passwordHash: await hashPassword(input.password),
       role: input.role,
     });
 
@@ -121,47 +118,20 @@ router.post(
   })
 );
 
-async function nameMatchesAccount(
-  user: { _id: unknown; role: "WORKER" | "FACTORY"; name?: string },
-  inputName: string
-) {
-  const wanted = normalizeName(inputName);
-  if (user.name && normalizeName(user.name) === wanted) {
-    return true;
-  }
-
-  if (user.role === "WORKER") {
-    const profile = await WorkerProfileModel.findOne({ user: user._id }).select("fullName");
-    return Boolean(profile?.fullName && normalizeName(profile.fullName) === wanted);
-  }
-
-  const profile = await FactoryProfileModel.findOne({ user: user._id }).select("companyName hrName");
-  if (!profile) {
-    return false;
-  }
-
-  return (
-    normalizeName(profile.companyName) === wanted ||
-    normalizeName(profile.hrName) === wanted
-  );
-}
-
 router.post(
   "/login",
   asyncHandler(async (req, res) => {
     const input = loginSchema.parse(req.body);
     const phone = normalizePhone(input.phone);
 
-    const user = await UserModel.findOne({ phone, role: input.role });
-
+    const user = await UserModel.findOne({ phone });
     if (!user) {
-      return res.status(401).json({
-        message: "No account found. Please create an account first.",
-      });
+      return res.status(401).json({ message: "Invalid phone number or password." });
     }
 
-    if (!(await nameMatchesAccount(user, input.name))) {
-      return res.status(401).json({ message: "Name does not match this phone number" });
+    const valid = await verifyPassword(input.password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ message: "Invalid phone number or password." });
     }
 
     return res.json(createAuthResponse(user));

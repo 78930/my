@@ -17,11 +17,11 @@ type AuthContextValue = {
   profile: SessionProfile;
   isLoading: boolean;
   isSubmitting: boolean;
-  signIn: (payload: { role: UserType; name: string; phone: string }) => Promise<void>;
+  signIn: (payload: { role: UserType; name: string; phone: string; password: string }) => Promise<void>;
   requestOtp: (payload: { phone: string }) => Promise<OtpRequestResponse>;
   signInWithOtp: (payload: { phone: string; otp: string }) => Promise<void>;
-  signUpWorker: (payload: { name: string; phone: string }) => Promise<string>;
-  signUpFactory: (payload: { name: string; phone: string }) => Promise<string>;
+  signUpWorker: (payload: { name: string; phone: string; password: string }) => Promise<string>;
+  signUpFactory: (payload: { name: string; phone: string; password: string }) => Promise<string>;
   refreshSession: () => Promise<void>;
   signOut: () => Promise<void>;
   isFactory: boolean;
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [token]);
 
-  const signIn = useCallback(async (payload: { role: UserType; name: string; phone: string }) => {
+  const signIn = useCallback(async (payload: { role: UserType; name: string; phone: string; password: string }) => {
     setIsSubmitting(true);
     try {
       const session = await login(payload);
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persistSession]);
 
-  const signUpWorker = useCallback(async (payload: { name: string; phone: string }): Promise<string> => {
+  const signUpWorker = useCallback(async (payload: { name: string; phone: string; password: string }): Promise<string> => {
     setIsSubmitting(true);
     try {
       const session = await registerWorker(payload);
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [persistSession]);
 
-  const signUpFactory = useCallback(async (payload: { name: string; phone: string }): Promise<string> => {
+  const signUpFactory = useCallback(async (payload: { name: string; phone: string; password: string }): Promise<string> => {
     setIsSubmitting(true);
     try {
       const session = await registerFactory(payload);
