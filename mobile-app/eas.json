@@ -19,5 +19,14 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://my-1-1iz4.onrender.com"
       }
     }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    }
   }
 }

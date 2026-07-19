@@ -12,3 +12,4 @@ ios/
 .expo/
 .cache/
 *.log
+google-service-account.json

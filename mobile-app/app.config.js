@@ -48,8 +48,15 @@ module.exports = {
       },
       apiBaseUrl,
     },
+    web: {
+      favicon: './assets/images/icon.png',
+    },
     android: {
       package: 'com.vikram379.sketu',
+      adaptiveIcon: {
+        foregroundImage: './assets/images/icon.png',
+        backgroundColor: '#FFFFFF',
+      },
     },
     ios: {
       bundleIdentifier: 'com.vikram379.sketu',

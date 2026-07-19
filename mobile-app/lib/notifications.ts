@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Lazy import — expo-notifications crashes Expo Go on module load (SDK 53 removed
 // remote push from Expo Go). We require() inside each function so the import only
@@ -8,8 +9,14 @@ function N() {
   return require('expo-notifications') as typeof import('expo-notifications');
 }
 
+// Running inside Expo Go (storeClient) — push notifications not supported there since SDK 53.
+function isExpoGo(): boolean {
+  return Constants.executionEnvironment === 'storeClient';
+}
+
 export async function registerForPushNotifications(): Promise<string | null> {
   try {
+    if (isExpoGo()) return null;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const Device = require('expo-device') as typeof import('expo-device');
     if (!Device.isDevice) return null;
